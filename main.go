@@ -3,16 +3,22 @@ package main
 import (
 	"log"
 
-	"github.com/vladimirdotk/news-bot/internal/provider/natsserver"
-
 	"github.com/caarlos0/env/v6"
-	nats "github.com/nats-io/nats.go"
+	"github.com/go-redis/redis/v7"
 	"github.com/vladimirdotk/news-bot/internal/handlers"
+	"github.com/vladimirdotk/news-bot/internal/provider/redisserver"
 	"github.com/vladimirdotk/news-bot/internal/telegram"
 )
 
 type Config struct {
 	TelegramBotToken string `env:"TELEGRAM_BOT_TOKEN,required"`
+	Redis            RedisConfig
+}
+
+type RedisConfig struct {
+	Addr     string `env:"REDIS_ADDR,required"`
+	Password string `env:"REDIS_PASSWORD"`
+	Db       int    `env:"REDIS_DB"`
 }
 
 func main() {
@@ -22,20 +28,13 @@ func main() {
 		log.Fatalf("parsing config: %v", err)
 	}
 
-	natsClient, err := nats.Connect(nats.DefaultURL, nats.NoReconnect())
+	redisClient := redis.NewClient(&redis.Options{
+		Addr:     config.Redis.Addr,
+		Password: config.Redis.Password,
+		DB:       config.Redis.Db,
+	})
 
-	if err != nil {
-		log.Fatalf("connecting to natsserver: %v", err)
-	}
-
-	natsEncodedConn, err := nats.NewEncodedConn(natsClient, nats.JSON_ENCODER)
-	if err != nil {
-		log.Fatalf("create encoded connection: %v", err)
-	}
-	defer natsEncodedConn.Close()
-
-	//go:generate
-	queueService := natsserver.NewQueueService(natsEncodedConn)
+	queueService := redisserver.NewQueueService(redisClient)
 	messageHandler := handlers.NewMessageHandler(queueService)
 
 	bot, err := telegram.NewBot(config.TelegramBotToken, messageHandler, true)
