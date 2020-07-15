@@ -7,4 +7,5 @@ require (
 	github.com/go-telegram-bot-api/telegram-bot-api v4.6.4+incompatible
 	github.com/nats-io/nats.go v1.10.0
 	github.com/technoweenie/multipartstreamer v1.0.1 // indirect
+	github.com/go-redis/redis/v7 v7.4.0
 )

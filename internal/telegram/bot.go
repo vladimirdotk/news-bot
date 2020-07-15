@@ -3,10 +3,10 @@ package telegram
 import (
 	"fmt"
 	"log"
-
-	"github.com/vladimirdotk/news-bot/internal/domain"
+	"strconv"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
+	"github.com/vladimirdotk/news-bot/internal/domain"
 )
 
 type Bot struct {
@@ -50,18 +50,29 @@ func (b *Bot) Run() {
 		log.Printf("[%s] %s", update.Message.From.UserName, update.Message.Text)
 
 		incomingMessage := incomingMessageToDomain(update.Message)
-		if err := b.messageHandler.Handle(incomingMessage); err != nil {
-			// log error
-			msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Произошла ошибка")
-			msg.ReplyToMessageID = update.Message.MessageID
-			b.bot.Send(msg)
+		if incomingMessage == nil {
 			continue
 		}
 
-		msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Принято")
-		msg.ReplyToMessageID = update.Message.MessageID
+		if err := b.messageHandler.Handle(incomingMessage); err != nil {
+			log.Printf("handle message: %v", err)
+			b.answer(update.Message.Chat.ID, update.Message.MessageID, "Произошла ошибка")
+			continue
+		}
 
-		b.bot.Send(msg)
+		b.answer(update.Message.Chat.ID, update.Message.MessageID, "Принято")
+	}
+}
+
+func (b *Bot) answer(chatID int64, replyToMessageID int, text string) {
+	message := tgbotapi.NewMessage(chatID, text)
+	message.ReplyToMessageID = replyToMessageID
+	b.send(message)
+}
+
+func (b *Bot) send(message tgbotapi.Chattable) {
+	if _, err := b.bot.Send(message); err != nil {
+		log.Printf("send message: %v", err)
 	}
 }
 
@@ -71,9 +82,10 @@ func incomingMessageToDomain(src *tgbotapi.Message) *domain.IncomingMessage {
 	}
 
 	return &domain.IncomingMessage{
-		ID:       string(src.MessageID),
-		UserID:   string(src.From.ID),
+		ID:       strconv.Itoa(src.MessageID),
+		UserID:   strconv.Itoa(src.From.ID),
 		Username: src.From.UserName,
 		Text:     src.Text,
+		Source:   domain.MessageSourceTelegram,
 	}
 }
