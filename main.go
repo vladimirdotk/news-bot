@@ -1,10 +1,13 @@
 package main
 
 import (
+	"context"
 	"log"
+	"sync"
 
 	"github.com/caarlos0/env/v6"
 	"github.com/go-redis/redis/v7"
+	"github.com/vladimirdotk/news-bot/internal/command"
 	"github.com/vladimirdotk/news-bot/internal/handlers"
 	"github.com/vladimirdotk/news-bot/internal/provider/redisserver"
 	"github.com/vladimirdotk/news-bot/internal/telegram"
@@ -42,5 +45,16 @@ func main() {
 		log.Fatalf("create new bot: %v", err)
 	}
 
+	commandExecutor := command.NewExecutor(redisClient, bot)
+
+	worker := redisserver.NewWorker(redisClient, commandExecutor)
+
+	var wg sync.WaitGroup
+
+	wg.Add(1)
+	go worker.Run(context.TODO(), &wg)
+
 	bot.Run()
+
+	wg.Wait()
 }

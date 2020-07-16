@@ -1,17 +1,28 @@
 package domain
 
 type IncomingMessage struct {
-	ID       string        `json:"id"`
-	UserID   string        `json:"user_id"`
-	Username string        `json:"username"`
-	Text     string        `json:"text"`
-	Source   MessageSource `json:"source"`
+	ID       string `json:"id"`
+	UserID   string `json:"user_id"`
+	Username string `json:"username"`
+	Text     string `json:"text"`
+	Source   System `json:"system"`
 }
 
-type MessageSource string
+const (
+	MessageCommandAddSource  = "/add"
+	MessageCommandListSource = "/list"
+)
 
-func (m MessageSource) String() string {
+type System string
+
+func (m System) String() string {
 	return string(m)
 }
 
-const MessageSourceTelegram MessageSource = "telegram"
+const SystemTelegram System = "telegram"
+
+type OutgoingMessage struct {
+	UserID      string
+	Text        string
+	Destination System
+}
