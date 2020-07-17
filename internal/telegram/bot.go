@@ -59,9 +59,18 @@ func (b *Bot) Run() {
 			b.answer(update.Message.Chat.ID, update.Message.MessageID, "Произошла ошибка")
 			continue
 		}
-
-		b.answer(update.Message.Chat.ID, update.Message.MessageID, "Принято")
 	}
+}
+
+func (b *Bot) Send(outgoingMessage domain.OutgoingMessage) error {
+	tgMessage, err := outgoingMessageToChattable(outgoingMessage)
+	if err != nil {
+		return fmt.Errorf("convert outgoing message to chattable: %v", err)
+	}
+
+	b.send(tgMessage)
+
+	return nil
 }
 
 func (b *Bot) answer(chatID int64, replyToMessageID int, text string) {
@@ -86,6 +95,15 @@ func incomingMessageToDomain(src *tgbotapi.Message) *domain.IncomingMessage {
 		UserID:   strconv.Itoa(src.From.ID),
 		Username: src.From.UserName,
 		Text:     src.Text,
-		Source:   domain.MessageSourceTelegram,
+		Source:   domain.SystemTelegram,
 	}
+}
+
+func outgoingMessageToChattable(outgoingMessage domain.OutgoingMessage) (tgbotapi.Chattable, error) {
+	chatID, err := strconv.ParseInt(outgoingMessage.UserID, 10, 64)
+	if err != nil {
+		return nil, fmt.Errorf("convert chatID: %v", err)
+	}
+
+	return tgbotapi.NewMessage(chatID, outgoingMessage.Text), nil
 }

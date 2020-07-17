@@ -33,7 +33,7 @@ func (m *MessageHandler) Handle(message *domain.IncomingMessage) error {
 func messageToJSON(src *domain.IncomingMessage) ([]byte, error) {
 	b, err := json.Marshal(src)
 	if err != nil {
-		return nil, fmt.Errorf("marshal message: %v", err)
+		return nil, fmt.Errorf("marshal message: %+v", err)
 	}
 
 	return b, nil
