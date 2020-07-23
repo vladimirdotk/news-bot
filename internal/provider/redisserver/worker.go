@@ -5,12 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"sync"
 	"time"
 
-	"github.com/vladimirdotk/news-bot/internal/domain"
-
 	"github.com/go-redis/redis/v7"
+	"github.com/vladimirdotk/news-bot/internal/domain"
 )
 
 type Worker struct {
@@ -25,7 +23,7 @@ func NewWorker(redisClient *redis.Client, commandExecutor CommandExecutor) *Work
 	}
 }
 
-func (w *Worker) Run(ctx context.Context, wg *sync.WaitGroup) {
+func (w *Worker) Run(ctx context.Context) {
 	ticker := time.NewTicker(time.Second)
 
 loop:
@@ -39,8 +37,6 @@ loop:
 			}
 		}
 	}
-
-	wg.Done()
 }
 
 func (w *Worker) execute() error {

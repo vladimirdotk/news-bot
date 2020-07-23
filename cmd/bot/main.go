@@ -1,28 +1,14 @@
 package main
 
 import (
-	"context"
 	"log"
-	"sync"
 
 	"github.com/caarlos0/env/v6"
 	"github.com/go-redis/redis/v7"
-	"github.com/vladimirdotk/news-bot/internal/command"
 	"github.com/vladimirdotk/news-bot/internal/handlers"
 	"github.com/vladimirdotk/news-bot/internal/provider/redisserver"
 	"github.com/vladimirdotk/news-bot/internal/telegram"
 )
-
-type Config struct {
-	TelegramBotToken string `env:"TELEGRAM_BOT_TOKEN,required"`
-	Redis            RedisConfig
-}
-
-type RedisConfig struct {
-	Addr     string `env:"REDIS_ADDR,required"`
-	Password string `env:"REDIS_PASSWORD"`
-	Db       int    `env:"REDIS_DB"`
-}
 
 func main() {
 	config := Config{}
@@ -40,21 +26,10 @@ func main() {
 	queueService := redisserver.NewQueueService(redisClient)
 	messageHandler := handlers.NewMessageHandler(queueService)
 
-	bot, err := telegram.NewBot(config.TelegramBotToken, messageHandler, true)
+	bot, err := telegram.NewBot(config.Telegram.BotToken, messageHandler, true)
 	if err != nil {
 		log.Fatalf("create new bot: %v", err)
 	}
 
-	commandExecutor := command.NewExecutor(redisClient, bot)
-
-	worker := redisserver.NewWorker(redisClient, commandExecutor)
-
-	var wg sync.WaitGroup
-
-	wg.Add(1)
-	go worker.Run(context.TODO(), &wg)
-
 	bot.Run()
-
-	wg.Wait()
 }
