@@ -11,7 +11,7 @@ build:
 
 .PHONY: run
 run:
-	./bin/bot
+	./bin/bot &
 	./bin/executor
 
 .PHONY: clean
