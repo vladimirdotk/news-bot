@@ -87,12 +87,3 @@ func incomingMessageToDomain(src *tgbotapi.Message) *domain.IncomingMessage {
 		Source:   domain.SystemTelegram,
 	}
 }
-
-func outgoingMessageToChattable(outgoingMessage domain.OutgoingMessage) (tgbotapi.Chattable, error) {
-	chatID, err := strconv.ParseInt(outgoingMessage.UserID, 10, 64)
-	if err != nil {
-		return nil, fmt.Errorf("convert chatID: %v", err)
-	}
-
-	return tgbotapi.NewMessage(chatID, outgoingMessage.Text), nil
-}
