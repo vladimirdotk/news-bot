@@ -62,17 +62,6 @@ func (b *Bot) Run() {
 	}
 }
 
-func (b *Bot) Send(outgoingMessage domain.OutgoingMessage) error {
-	tgMessage, err := outgoingMessageToChattable(outgoingMessage)
-	if err != nil {
-		return fmt.Errorf("convert outgoing message to chattable: %v", err)
-	}
-
-	b.send(tgMessage)
-
-	return nil
-}
-
 func (b *Bot) answer(chatID int64, replyToMessageID int, text string) {
 	message := tgbotapi.NewMessage(chatID, text)
 	message.ReplyToMessageID = replyToMessageID
