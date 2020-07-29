@@ -45,7 +45,11 @@ func (e *Executor) addSource(message domain.IncomingMessage) error {
 
 	outgoingMessage := toOutgoingMessage(message, "Источник добавлен")
 
-	return e.responseSender.Send(outgoingMessage)
+	if err := e.responseSender.Send(outgoingMessage); err != nil {
+		return fmt.Errorf("send response: %v", err)
+	}
+
+	return nil
 }
 
 func (e *Executor) listSources(message domain.IncomingMessage) error {
