@@ -43,6 +43,12 @@ func (e *Executor) addSource(message domain.IncomingMessage) error {
 		return fmt.Errorf("sadd, key: %s, value: %s, err: %v", message.UserID, commandArgs[1], err)
 	}
 
+	outgoingMessage := toOutgoingMessage(message, "Источник добавлен")
+
+	if err := e.responseSender.Send(outgoingMessage); err != nil {
+		return fmt.Errorf("send response: %v", err)
+	}
+
 	return nil
 }
 
