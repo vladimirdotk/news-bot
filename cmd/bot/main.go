@@ -5,7 +5,7 @@ import (
 
 	"github.com/caarlos0/env/v6"
 	"github.com/go-redis/redis/v7"
-	"github.com/vladimirdotk/news-bot/internal/handlers"
+	"github.com/vladimirdotk/news-bot/internal/command"
 	"github.com/vladimirdotk/news-bot/internal/provider/redisserver"
 	"github.com/vladimirdotk/news-bot/internal/telegram"
 )
@@ -24,9 +24,9 @@ func main() {
 	})
 
 	queueService := redisserver.NewQueueService(redisClient)
-	messageHandler := handlers.NewMessageHandler(queueService)
+	commandHandler := command.NewHandler(queueService)
 
-	bot, err := telegram.NewBot(config.Telegram.BotToken, messageHandler, true)
+	bot, err := telegram.NewBot(config.Telegram.BotToken, commandHandler, true)
 	if err != nil {
 		log.Fatalf("create new bot: %v", err)
 	}
