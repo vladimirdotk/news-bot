@@ -1,4 +1,4 @@
-package redisserver
+package redis
 
 import "github.com/vladimirdotk/news-bot/internal/domain"
 

@@ -8,7 +8,7 @@ import (
 	"github.com/caarlos0/env/v6"
 	"github.com/go-redis/redis/v7"
 	"github.com/vladimirdotk/news-bot/internal/command"
-	"github.com/vladimirdotk/news-bot/internal/provider/redisserver"
+	redisprovider "github.com/vladimirdotk/news-bot/internal/provider/redis"
 	"github.com/vladimirdotk/news-bot/internal/provider/telegram"
 )
 
@@ -28,6 +28,6 @@ func main() {
 	messageSender := telegram.NewSender(&http.Client{}, config.Telegram.BotToken)
 	commandExecutor := command.NewExecutor(redisClient, messageSender)
 
-	worker := redisserver.NewWorker(redisClient, commandExecutor)
+	worker := redisprovider.NewWorker(redisClient, commandExecutor)
 	worker.Run(context.TODO())
 }
