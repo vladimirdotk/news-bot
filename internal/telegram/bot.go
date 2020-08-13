@@ -84,6 +84,6 @@ func incomingMessageToDomain(src *tgbotapi.Message) *domain.IncomingMessage {
 		UserID:   strconv.Itoa(src.From.ID),
 		Username: src.From.UserName,
 		Text:     src.Text,
-		Source:   domain.SystemTelegram,
+		Source:   domain.MessageSystemTelegram,
 	}
 }

@@ -35,6 +35,7 @@ func (e *Executor) Exec(message domain.IncomingMessage) error {
 	return fmt.Errorf("executor not found for command: %s", message)
 }
 
+// addSource validates and adds source to user's list (if valid).
 func (e *Executor) addSource(message domain.IncomingMessage) error {
 	commandArgs, err := getCommandArgs(message.Text)
 	if err != nil {
@@ -67,6 +68,7 @@ func (e *Executor) addSource(message domain.IncomingMessage) error {
 	return nil
 }
 
+// listSources sends user's sources list if any.
 func (e *Executor) listSources(message domain.IncomingMessage) error {
 	sources, err := e.redisClient.SMembers(message.UserID).Result()
 	if err != nil {
@@ -93,6 +95,8 @@ func (e *Executor) listSources(message domain.IncomingMessage) error {
 	return nil
 }
 
+// getCommandArgs returns slice of command args
+// TODO: make more clear and reusable
 func getCommandArgs(message string) ([]string, error) {
 	messageParts := strings.Split(message, " ")
 	if len(messageParts) < 2 {
