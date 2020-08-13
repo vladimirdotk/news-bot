@@ -40,7 +40,7 @@ loop:
 }
 
 func (w *Worker) execute() error {
-	response, err := w.redisClient.BLPop(time.Second*2, "incoming_message").Result()
+	response, err := w.redisClient.BLPop(time.Second*2, "incoming_command").Result()
 	if err == redis.Nil {
 		return nil
 	}

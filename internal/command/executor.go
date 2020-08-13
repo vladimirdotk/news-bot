@@ -1,6 +1,7 @@
 package command
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -11,12 +12,14 @@ import (
 type Executor struct {
 	redisClient    *redis.Client
 	responseSender ResponseSender
+	sourceDetector SourceDetector
 }
 
-func NewExecutor(redisClient *redis.Client, responseSender ResponseSender) *Executor {
+func NewExecutor(redisClient *redis.Client, responseSender ResponseSender, sourceDetector SourceDetector) *Executor {
 	return &Executor{
 		redisClient:    redisClient,
 		responseSender: responseSender,
+		sourceDetector: sourceDetector,
 	}
 }
 
@@ -38,9 +41,21 @@ func (e *Executor) addSource(message domain.IncomingMessage) error {
 		return fmt.Errorf("get command args: %v", err)
 	}
 
-	// TODO: validate source
-	if err := e.redisClient.SAdd(message.UserID, commandArgs[1]).Err(); err != nil {
-		return fmt.Errorf("sadd, key: %s, value: %s, err: %v", message.UserID, commandArgs[1], err)
+	sourceType := e.sourceDetector.Detect(commandArgs[1])
+	if sourceType == domain.SourceTypeUnknown {
+		return fmt.Errorf("unknown source by URL: %v", commandArgs[1])
+	}
+
+	sourceJSON, err := sourceToJSON(&domain.Source{
+		URL:  commandArgs[1],
+		Type: sourceType,
+	})
+	if err != nil {
+		return fmt.Errorf("source to JSON: %v", err)
+	}
+
+	if err := e.redisClient.SAdd(message.UserID, sourceJSON).Err(); err != nil {
+		return fmt.Errorf("sadd, key: %s, value: %s, err: %v", message.UserID, string(sourceJSON), err)
 	}
 
 	outgoingMessage := toOutgoingMessage(message, "Источник добавлен")
@@ -58,7 +73,16 @@ func (e *Executor) listSources(message domain.IncomingMessage) error {
 		return fmt.Errorf("smembers, key: %s, err: %v", message.UserID, err)
 	}
 
-	outgoingMessage := toOutgoingMessage(message, strings.Join(sources, "\n"))
+	sourcesURLs := make([]string, len(sources))
+	for i, source := range sources {
+		domainSource, err := sourceFromJSON(source)
+		if err != nil {
+			return fmt.Errorf("source from JSON: %v", err)
+		}
+		sourcesURLs[i] = domainSource.URL
+	}
+
+	outgoingMessage := toOutgoingMessage(message, strings.Join(sourcesURLs, "\n"))
 	if len(sources) == 0 {
 		outgoingMessage.Text = "Источники не найдены"
 	}
@@ -84,4 +108,22 @@ func toOutgoingMessage(src domain.IncomingMessage, text string) domain.OutgoingM
 		Text:        text,
 		Destination: src.Source,
 	}
+}
+
+func sourceToJSON(src *domain.Source) ([]byte, error) {
+	b, err := json.Marshal(src)
+	if err != nil {
+		return nil, fmt.Errorf("marshal source: %v", err)
+	}
+
+	return b, nil
+}
+
+func sourceFromJSON(src string) (*domain.Source, error) {
+	var source domain.Source
+	if err := json.Unmarshal([]byte(src), &source); err != nil {
+		return nil, fmt.Errorf("unmarshal source: %v", err)
+	}
+
+	return &source, nil
 }

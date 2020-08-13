@@ -9,3 +9,7 @@ type ResponseSender interface {
 type QueueService interface {
 	Publish(topic string, data interface{}) error
 }
+
+type SourceDetector interface {
+	Detect(sourceURL string) domain.SourceType
+}
