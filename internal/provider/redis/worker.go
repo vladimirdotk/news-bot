@@ -23,6 +23,7 @@ func NewWorker(redisClient *redis.Client, commandExecutor CommandExecutor) *Work
 	}
 }
 
+// Run executes worker.
 func (w *Worker) Run(ctx context.Context) {
 	ticker := time.NewTicker(time.Second)
 
