@@ -10,12 +10,12 @@ import (
 )
 
 type Executor struct {
-	redisClient    *redis.Client
+	redisClient    redis.Cmdable
 	responseSender ResponseSender
 	sourceDetector SourceDetector
 }
 
-func NewExecutor(redisClient *redis.Client, responseSender ResponseSender, sourceDetector SourceDetector) *Executor {
+func NewExecutor(redisClient redis.Cmdable, responseSender ResponseSender, sourceDetector SourceDetector) *Executor {
 	return &Executor{
 		redisClient:    redisClient,
 		responseSender: responseSender,
