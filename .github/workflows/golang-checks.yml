@@ -1,4 +1,4 @@
-name: golangci-lint
+name: golang-checks
 on:
   push:
     branches:
@@ -20,3 +20,5 @@ jobs:
         uses: golangci/golangci-lint-action@v1
         with:
           version: v1.28
+      - name: tests
+        run: make test

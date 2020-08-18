@@ -11,3 +11,7 @@
 + run redis `docker-compose up -d`
 + run bot `TELEGRAM_BOT_TOKEN="your-token" REDIS_ADDR="localhost:6379 ./bin/bot`
 + run command executor `TELEGRAM_BOT_TOKEN="your-token" REDIS_ADDR="localhost:6379 ./bin/executor`
+
+## Tests
++ run `make generate` to generate mocks (optional)
++ run `make test`

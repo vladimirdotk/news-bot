@@ -2,6 +2,8 @@ package redis
 
 import "github.com/vladimirdotk/news-bot/internal/domain"
 
+//go:generate minimock -g -i github.com/vladimirdotk/news-bot/internal/provider/redis.CommandExecutor -o ./mocks -s "_mock.go"
+
 // CommandExecutor describes a service that executes user's commands
 // received from different message systems.
 type CommandExecutor interface {
