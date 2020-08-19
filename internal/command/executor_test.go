@@ -35,7 +35,7 @@ func TestExecutor_Exec(t *testing.T) {
 
 				redisClient := redismock.NewMock()
 				redisClient.
-					On("SAdd", "u1", []interface{}{sourceJSON}).
+					On("SAdd", domain.UserSourcesKey("u1"), []interface{}{sourceJSON}).
 					Return(redis.NewIntCmd())
 
 				responseSender := mocks.NewResponseSenderMock(t)
@@ -65,7 +65,7 @@ func TestExecutor_Exec(t *testing.T) {
 			executorFunc: func(mc minimock.MockController, t *testing.T) *Executor {
 				redisClient := redismock.NewMock()
 				redisClient.
-					On("SMembers", "u1").
+					On("SMembers", domain.UserSourcesKey("u1")).
 					Return(redis.NewStringSliceResult([]string{
 						`{"url":"https://news.yandex.ru/health.rss","type":"RSS"}`,
 						`{"url":"https://habr.com/ru/rss/all/all/","type":"RSS"}`,

@@ -55,7 +55,9 @@ func (e *Executor) addSource(message domain.IncomingMessage) error {
 		return fmt.Errorf("source to JSON: %v", err)
 	}
 
-	if err := e.redisClient.SAdd(message.UserID, sourceJSON).Err(); err != nil {
+	key := domain.UserSourcesKey(message.UserID)
+
+	if err := e.redisClient.SAdd(key, sourceJSON).Err(); err != nil {
 		return fmt.Errorf("sadd, key: %s, value: %s, err: %v", message.UserID, string(sourceJSON), err)
 	}
 
@@ -70,7 +72,9 @@ func (e *Executor) addSource(message domain.IncomingMessage) error {
 
 // listSources sends user's sources list if any.
 func (e *Executor) listSources(message domain.IncomingMessage) error {
-	sources, err := e.redisClient.SMembers(message.UserID).Result()
+	key := domain.UserSourcesKey(message.UserID)
+
+	sources, err := e.redisClient.SMembers(key).Result()
 	if err != nil {
 		return fmt.Errorf("smembers, key: %s, err: %v", message.UserID, err)
 	}
