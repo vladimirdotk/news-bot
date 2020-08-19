@@ -1,5 +1,7 @@
 package domain
 
+import "fmt"
+
 // Source is a source of news.
 type Source struct {
 	// URL is a source location.
@@ -19,3 +21,8 @@ const (
 	SourceTypeUnknown SourceType = "UNKNOWN"
 	SourceTypeRSS     SourceType = "RSS"
 )
+
+// UserSourcesKey returns key to store user sources in a storage.
+func UserSourcesKey(userID string) string {
+	return fmt.Sprintf("user_sources|%s", userID)
+}
