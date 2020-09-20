@@ -27,7 +27,7 @@ func TestExecutor_Exec(t *testing.T) {
 					Expect("https://habr.com/ru/rss/all/all/").
 					Return(domain.SourceTypeRSS)
 
-				sourceJSON, err := sourceToJSON(&domain.Source{
+				sourceJSON, err := domain.SourceToJSON(&domain.Source{
 					URL:  "https://habr.com/ru/rss/all/all/",
 					Type: domain.SourceTypeRSS,
 				})
