@@ -8,14 +8,15 @@ import (
 	mm_time "time"
 
 	"github.com/gojuno/minimock/v3"
+	"github.com/vladimirdotk/news-bot/internal/domain"
 )
 
 // QueueServiceMock implements command.QueueService
 type QueueServiceMock struct {
 	t minimock.Tester
 
-	funcPublish          func(topic string, data interface{}) (err error)
-	inspectFuncPublish   func(topic string, data interface{})
+	funcPublish          func(topic domain.QueueTopic, data interface{}) (err error)
+	inspectFuncPublish   func(topic domain.QueueTopic, data interface{})
 	afterPublishCounter  uint64
 	beforePublishCounter uint64
 	PublishMock          mQueueServiceMockPublish
@@ -53,7 +54,7 @@ type QueueServiceMockPublishExpectation struct {
 
 // QueueServiceMockPublishParams contains parameters of the QueueService.Publish
 type QueueServiceMockPublishParams struct {
-	topic string
+	topic domain.QueueTopic
 	data  interface{}
 }
 
@@ -63,7 +64,7 @@ type QueueServiceMockPublishResults struct {
 }
 
 // Expect sets up expected params for QueueService.Publish
-func (mmPublish *mQueueServiceMockPublish) Expect(topic string, data interface{}) *mQueueServiceMockPublish {
+func (mmPublish *mQueueServiceMockPublish) Expect(topic domain.QueueTopic, data interface{}) *mQueueServiceMockPublish {
 	if mmPublish.mock.funcPublish != nil {
 		mmPublish.mock.t.Fatalf("QueueServiceMock.Publish mock is already set by Set")
 	}
@@ -83,7 +84,7 @@ func (mmPublish *mQueueServiceMockPublish) Expect(topic string, data interface{}
 }
 
 // Inspect accepts an inspector function that has same arguments as the QueueService.Publish
-func (mmPublish *mQueueServiceMockPublish) Inspect(f func(topic string, data interface{})) *mQueueServiceMockPublish {
+func (mmPublish *mQueueServiceMockPublish) Inspect(f func(topic domain.QueueTopic, data interface{})) *mQueueServiceMockPublish {
 	if mmPublish.mock.inspectFuncPublish != nil {
 		mmPublish.mock.t.Fatalf("Inspect function is already set for QueueServiceMock.Publish")
 	}
@@ -107,7 +108,7 @@ func (mmPublish *mQueueServiceMockPublish) Return(err error) *QueueServiceMock {
 }
 
 //Set uses given function f to mock the QueueService.Publish method
-func (mmPublish *mQueueServiceMockPublish) Set(f func(topic string, data interface{}) (err error)) *QueueServiceMock {
+func (mmPublish *mQueueServiceMockPublish) Set(f func(topic domain.QueueTopic, data interface{}) (err error)) *QueueServiceMock {
 	if mmPublish.defaultExpectation != nil {
 		mmPublish.mock.t.Fatalf("Default expectation is already set for the QueueService.Publish method")
 	}
@@ -122,7 +123,7 @@ func (mmPublish *mQueueServiceMockPublish) Set(f func(topic string, data interfa
 
 // When sets expectation for the QueueService.Publish which will trigger the result defined by the following
 // Then helper
-func (mmPublish *mQueueServiceMockPublish) When(topic string, data interface{}) *QueueServiceMockPublishExpectation {
+func (mmPublish *mQueueServiceMockPublish) When(topic domain.QueueTopic, data interface{}) *QueueServiceMockPublishExpectation {
 	if mmPublish.mock.funcPublish != nil {
 		mmPublish.mock.t.Fatalf("QueueServiceMock.Publish mock is already set by Set")
 	}
@@ -142,7 +143,7 @@ func (e *QueueServiceMockPublishExpectation) Then(err error) *QueueServiceMock {
 }
 
 // Publish implements command.QueueService
-func (mmPublish *QueueServiceMock) Publish(topic string, data interface{}) (err error) {
+func (mmPublish *QueueServiceMock) Publish(topic domain.QueueTopic, data interface{}) (err error) {
 	mm_atomic.AddUint64(&mmPublish.beforePublishCounter, 1)
 	defer mm_atomic.AddUint64(&mmPublish.afterPublishCounter, 1)
 

@@ -17,7 +17,7 @@ type ResponseSender interface {
 // QueueService describes a service for working with queue.
 type QueueService interface {
 	// Publish sets message with certain topic to queue.
-	Publish(topic string, data interface{}) error
+	Publish(topic domain.QueueTopic, data interface{}) error
 }
 
 //go:generate minimock -g -i github.com/vladimirdotk/news-bot/internal/command.SourceDetector -o ./mocks -s "_mock.go"

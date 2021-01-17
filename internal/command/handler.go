@@ -23,7 +23,7 @@ func (h *Handler) Handle(command *domain.IncomingMessage) error {
 		return fmt.Errorf("convert command to JSON: %v", err)
 	}
 
-	if err := h.queueService.Publish("incoming_command", marshaledCommand); err != nil {
+	if err := h.queueService.Publish(domain.QueueTopicIncomingCommand, marshaledCommand); err != nil {
 		return fmt.Errorf("publish incoming command: %v", err)
 	}
 
