@@ -5,18 +5,20 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"sync"
 	"time"
 
 	"github.com/go-redis/redis/v7"
+
 	"github.com/vladimirdotk/news-bot/internal/domain"
 )
 
 type Worker struct {
-	redisClient     *redis.Client
+	redisClient     redis.Cmdable
 	commandExecutor CommandExecutor
 }
 
-func NewWorker(redisClient *redis.Client, commandExecutor CommandExecutor) *Worker {
+func NewWorker(redisClient redis.Cmdable, commandExecutor CommandExecutor) *Worker {
 	return &Worker{
 		redisClient:     redisClient,
 		commandExecutor: commandExecutor,
@@ -24,24 +26,29 @@ func NewWorker(redisClient *redis.Client, commandExecutor CommandExecutor) *Work
 }
 
 // Run executes worker.
-func (w *Worker) Run(ctx context.Context) {
+func (w *Worker) Run(ctx context.Context, wg *sync.WaitGroup) {
+	defer wg.Done()
+
+	log.Printf("Starting worker...")
+
 	ticker := time.NewTicker(time.Second)
 
 loop:
 	for {
 		select {
 		case <-ctx.Done():
+			log.Printf("Worker context is done")
 			break loop
 		case <-ticker.C:
 			if err := w.execute(); err != nil {
-				log.Printf("worker execute: %v", err)
+				log.Printf("Worker execute: %v", err)
 			}
 		}
 	}
 }
 
 func (w *Worker) execute() error {
-	response, err := w.redisClient.BLPop(time.Second*2, "incoming_command").Result()
+	response, err := w.redisClient.BLPop(time.Second*2, domain.QueueTopicIncomingCommand.String()).Result()
 	if err == redis.Nil {
 		return nil
 	}
