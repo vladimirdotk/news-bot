@@ -1,7 +1,6 @@
 package command
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -47,7 +46,7 @@ func (e *Executor) addSource(message domain.IncomingMessage) error {
 		return fmt.Errorf("unknown source by URL: %v", commandArgs[1])
 	}
 
-	sourceJSON, err := sourceToJSON(&domain.Source{
+	sourceJSON, err := domain.SourceToJSON(&domain.Source{
 		URL:  commandArgs[1],
 		Type: sourceType,
 	})
@@ -81,7 +80,7 @@ func (e *Executor) listSources(message domain.IncomingMessage) error {
 
 	sourcesURLs := make([]string, len(sources))
 	for i, source := range sources {
-		domainSource, err := sourceFromJSON(source)
+		domainSource, err := domain.SourceFromJSON(source)
 		if err != nil {
 			return fmt.Errorf("source from JSON: %v", err)
 		}
@@ -116,22 +115,4 @@ func toOutgoingMessage(src domain.IncomingMessage, text string) domain.OutgoingM
 		Text:        text,
 		Destination: src.Source,
 	}
-}
-
-func sourceToJSON(src *domain.Source) ([]byte, error) {
-	b, err := json.Marshal(src)
-	if err != nil {
-		return nil, fmt.Errorf("marshal source: %v", err)
-	}
-
-	return b, nil
-}
-
-func sourceFromJSON(src string) (*domain.Source, error) {
-	var source domain.Source
-	if err := json.Unmarshal([]byte(src), &source); err != nil {
-		return nil, fmt.Errorf("unmarshal source: %v", err)
-	}
-
-	return &source, nil
 }
