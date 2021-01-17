@@ -4,9 +4,13 @@ import (
 	"context"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
+	"sync"
 
 	"github.com/caarlos0/env/v6"
 	"github.com/go-redis/redis/v7"
+
 	"github.com/vladimirdotk/news-bot/internal/command"
 	redisprovider "github.com/vladimirdotk/news-bot/internal/provider/redis"
 	"github.com/vladimirdotk/news-bot/internal/provider/telegram"
@@ -29,7 +33,20 @@ func main() {
 	messageSender := telegram.NewSender(&http.Client{}, config.Telegram.BotToken)
 	sourceDetector := source.NewDetector()
 	commandExecutor := command.NewExecutor(redisClient, messageSender, sourceDetector)
-
 	worker := redisprovider.NewWorker(redisClient, commandExecutor)
-	worker.Run(context.TODO())
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	wg := sync.WaitGroup{}
+
+	wg.Add(1)
+	go worker.Run(ctx, &wg)
+
+	sigint := make(chan os.Signal, 1)
+	signal.Notify(sigint, os.Interrupt)
+	<-sigint
+
+	cancel()
+
+	wg.Wait()
 }
