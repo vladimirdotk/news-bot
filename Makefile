@@ -8,6 +8,7 @@ deps:
 build:
 	@go build -o ./bin/bot ./cmd/bot
 	@go build -o ./bin/executor ./cmd/executor
+	@go build -o ./bin/collector ./cmd/collector
 
 .PHONY: clean
 clean:
