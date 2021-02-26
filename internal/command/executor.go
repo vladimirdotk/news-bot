@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/go-redis/redis/v7"
+
 	"github.com/vladimirdotk/news-bot/internal/domain"
 )
 
@@ -41,29 +42,36 @@ func (e *Executor) addSource(message domain.IncomingMessage) error {
 		return fmt.Errorf("get command args: %v", err)
 	}
 
+	url := commandArgs[1]
+
+	key := domain.UserSourceKey(message.UserID, url)
+	exits, err := e.keyExists(key)
+	if err != nil {
+		return fmt.Errorf("key exists: %v", err)
+	}
+	if exits {
+		return e.sendSuccessMessage(message)
+	}
+
 	sourceType := e.sourceDetector.Detect(commandArgs[1])
 	if sourceType == domain.SourceTypeUnknown {
 		return fmt.Errorf("unknown source by URL: %v", commandArgs[1])
 	}
 
 	sourceJSON, err := domain.SourceToJSON(&domain.Source{
-		URL:  commandArgs[1],
+		URL:  url,
 		Type: sourceType,
 	})
 	if err != nil {
 		return fmt.Errorf("source to JSON: %v", err)
 	}
 
-	key := domain.UserSourcesKey(message.UserID)
-
 	if err := e.redisClient.SAdd(key, sourceJSON).Err(); err != nil {
 		return fmt.Errorf("sadd, key: %s, value: %s, err: %v", message.UserID, string(sourceJSON), err)
 	}
 
-	outgoingMessage := toOutgoingMessage(message, "Источник добавлен")
-
-	if err := e.responseSender.Send(outgoingMessage); err != nil {
-		return fmt.Errorf("send response: %v", err)
+	if err := e.sendSuccessMessage(message); err != nil {
+		return fmt.Errorf("send success message: %v", err)
 	}
 
 	return nil
@@ -71,11 +79,11 @@ func (e *Executor) addSource(message domain.IncomingMessage) error {
 
 // listSources sends user's sources list if any.
 func (e *Executor) listSources(message domain.IncomingMessage) error {
-	key := domain.UserSourcesKey(message.UserID)
+	key := domain.UserSourcesSearchKey(message.UserID)
 
 	sources, err := e.redisClient.SMembers(key).Result()
 	if err != nil {
-		return fmt.Errorf("smembers, key: %s, err: %v", message.UserID, err)
+		return fmt.Errorf("smembers, key: %s, err: %v", key, err)
 	}
 
 	sourcesURLs := make([]string, len(sources))
@@ -115,4 +123,27 @@ func toOutgoingMessage(src domain.IncomingMessage, text string) domain.OutgoingM
 		Text:        text,
 		Destination: src.Source,
 	}
+}
+
+func (e *Executor) sendSuccessMessage(message domain.IncomingMessage) error {
+	outgoingMessage := toOutgoingMessage(message, "Источник добавлен")
+
+	if err := e.responseSender.Send(outgoingMessage); err != nil {
+		return fmt.Errorf("send response: %v", err)
+	}
+
+	return nil
+}
+
+func (e *Executor) keyExists(key string) (bool, error) {
+	res := e.redisClient.Exists(key)
+
+	if res.Err() != nil {
+		return false, fmt.Errorf("exists, key: %s, err: %v", key, res.Err())
+	}
+	if res.Val() == 1 {
+		return true, nil
+	}
+
+	return false, nil
 }

@@ -4,9 +4,11 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"sync"
 	"time"
 
 	"github.com/go-redis/redis/v7"
+
 	"github.com/vladimirdotk/news-bot/internal/domain"
 )
 
@@ -37,18 +39,25 @@ loop:
 }
 
 func (c *Collector) run() error {
-	tasks, err := c.getTasks()
+	tasks, err := c.tasks()
 	if err != nil {
-		return fmt.Errorf("get tasks: %v", tasks)
+		return fmt.Errorf("get tasks: %v", err)
 	}
-	// TODO: collect news from tasks in goroutines, set news to queue
+
+	var wg sync.WaitGroup
+
+	for _, task := range tasks {
+		wg.Add(1)
+		go c.runTask(&wg, task)
+	}
+
+	wg.Wait()
+
 	return nil
 }
 
-func (c *Collector) getTasks() ([]domain.Task, error) {
-	userKeys := domain.UserSourcesKey("*")
-
-	keys, err := c.redisClient.Keys(userKeys).Result()
+func (c *Collector) tasks() ([]domain.Task, error) {
+	keys, err := c.redisClient.Keys("*").Result()
 	if err != nil {
 		return nil, fmt.Errorf("get users and sources: %v", err)
 	}
@@ -61,22 +70,27 @@ func (c *Collector) getTasks() ([]domain.Task, error) {
 			return nil, fmt.Errorf("extract user from key=%s: %v", key, err)
 		}
 
-		rawSources, err := c.redisClient.SMembers(key).Result()
+		rawSource, err := c.redisClient.Get(key).Result()
 		if err != nil {
-			return nil, fmt.Errorf("get sources: %v", err)
+			return nil, fmt.Errorf("get key=%s raw source: %v", key, err)
 		}
 
-		for _, rawSource := range rawSources {
-			source, err := domain.SourceFromJSON(rawSource)
-			if err != nil {
-				return nil, fmt.Errorf("source from JSON: %v", err)
-			}
-			tasks[i] = domain.Task{
-				UserID: userID,
-				Source: source,
-			}
+		source, err := domain.SourceFromJSON(rawSource)
+		if err != nil {
+			return nil, fmt.Errorf("source from JSON: %v", err)
+		}
+
+		tasks[i] = domain.Task{
+			UserID: userID,
+			Source: *source,
 		}
 	}
 
 	return tasks, nil
+}
+
+func (c *Collector) runTask(wg *sync.WaitGroup, task domain.Task) {
+	defer wg.Done()
+
+	// TODO: get news from source, set last seen field, set news to queue
 }
