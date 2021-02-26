@@ -1,10 +1,10 @@
 package domain
 
 import (
+	"crypto/md5"
 	"encoding/json"
 	"fmt"
 	"strings"
-	"time"
 )
 
 // Source is a source of news.
@@ -13,8 +13,8 @@ type Source struct {
 	URL string `json:"url"`
 	// Type is source type. Like RSS.
 	Type SourceType `json:"type"`
-	// LastNewsPublishTime indicates time of last collected source data.
-	LastNewsPublishTime time.Time
+	// LastSeenID is the last seen ID of the source item.
+	LastSeenID string `json:"last_seen_id"`
 }
 
 // SourceType is a type of news source.
@@ -29,9 +29,15 @@ const (
 	SourceTypeRSS     SourceType = "RSS"
 )
 
-// UserSourcesKey returns key fot user sources storage.
-func UserSourcesKey(userID string) string {
-	return fmt.Sprintf("user_sources|%s", userID)
+// UserSourceKey returns key for user source storage.
+func UserSourceKey(userID, source string) string {
+	hashSum := md5.Sum([]byte(source))
+	return fmt.Sprintf("%s|%s", userID, string(hashSum[:]))
+}
+
+// UserSourcesKey returns key for searching user sources.
+func UserSourcesSearchKey(userID string) string {
+	return fmt.Sprintf("%s|*", userID)
 }
 
 // ExtractUserFromKey returns userID extracted from user source key.

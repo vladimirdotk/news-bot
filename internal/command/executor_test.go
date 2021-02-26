@@ -8,6 +8,7 @@ import (
 	"github.com/gojuno/minimock/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
 	"github.com/vladimirdotk/news-bot/internal/command/mocks"
 	"github.com/vladimirdotk/news-bot/internal/domain"
 )
@@ -20,7 +21,7 @@ func TestExecutor_Exec(t *testing.T) {
 		err             error
 	}{
 		{
-			name: "Exec add source cmd",
+			name: "Exec add source cmd, source not exists, will be created",
 			executorFunc: func(mc minimock.MockController, t *testing.T) *Executor {
 				sourceDetector := mocks.NewSourceDetectorMock(t)
 				sourceDetector.DetectMock.
@@ -33,10 +34,16 @@ func TestExecutor_Exec(t *testing.T) {
 				})
 				require.NoError(t, err)
 
+				key := domain.UserSourceKey("u1", "https://habr.com/ru/rss/all/all/")
+
 				redisClient := redismock.NewMock()
 				redisClient.
-					On("SAdd", domain.UserSourcesKey("u1"), []interface{}{sourceJSON}).
+					On("SAdd", key, []interface{}{sourceJSON}).
 					Return(redis.NewIntCmd())
+
+				redisClient.
+					On("Exists", []string{key}).
+					Return(redis.NewIntResult(0, nil))
 
 				responseSender := mocks.NewResponseSenderMock(t)
 				responseSender.SendMock.Expect(domain.OutgoingMessage{
@@ -61,11 +68,52 @@ func TestExecutor_Exec(t *testing.T) {
 			},
 		},
 		{
+			name: "Exec add source cmd, source exists, will not be created",
+			executorFunc: func(mc minimock.MockController, t *testing.T) *Executor {
+				sourceJSON, err := domain.SourceToJSON(&domain.Source{
+					URL:  "https://habr.com/ru/rss/all/all/",
+					Type: domain.SourceTypeRSS,
+				})
+				require.NoError(t, err)
+
+				key := domain.UserSourceKey("u1", "https://habr.com/ru/rss/all/all/")
+
+				redisClient := redismock.NewMock()
+				redisClient.
+					On("SAdd", key, []interface{}{sourceJSON}).
+					Return(redis.NewIntCmd())
+
+				redisClient.
+					On("Exists", []string{key}).
+					Return(redis.NewIntResult(1, nil))
+
+				responseSender := mocks.NewResponseSenderMock(t)
+				responseSender.SendMock.Expect(domain.OutgoingMessage{
+					UserID:      "u1",
+					Text:        "Источник добавлен",
+					Destination: domain.MessageSystemTelegram,
+				}).
+					Return(nil)
+
+				return &Executor{
+					redisClient:    redisClient,
+					responseSender: responseSender,
+				}
+			},
+			incomingMessage: domain.IncomingMessage{
+				ID:       "1",
+				UserID:   "u1",
+				Username: "uname1",
+				Text:     "/add https://habr.com/ru/rss/all/all/",
+				Source:   domain.MessageSystemTelegram,
+			},
+		},
+		{
 			name: "Exec list sources cmd",
 			executorFunc: func(mc minimock.MockController, t *testing.T) *Executor {
 				redisClient := redismock.NewMock()
 				redisClient.
-					On("SMembers", domain.UserSourcesKey("u1")).
+					On("SMembers", domain.UserSourcesSearchKey("u1")).
 					Return(redis.NewStringSliceResult([]string{
 						`{"url":"https://news.yandex.ru/health.rss","type":"RSS"}`,
 						`{"url":"https://habr.com/ru/rss/all/all/","type":"RSS"}`,
