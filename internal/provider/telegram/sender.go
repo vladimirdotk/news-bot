@@ -2,6 +2,7 @@ package telegram
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -27,7 +28,7 @@ func NewSender(httpClient *http.Client, token string) *Sender {
 	}
 }
 
-func (s *Sender) Send(message domain.OutgoingMessage) error {
+func (s *Sender) Send(ctx context.Context, message domain.OutgoingMessage) error {
 	chatID, err := strconv.ParseInt(message.UserID, 10, 64)
 	if err != nil {
 		return fmt.Errorf("convert userID to chatID: %v", err)
@@ -46,7 +47,16 @@ func (s *Sender) Send(message domain.OutgoingMessage) error {
 		return fmt.Errorf("encode telegram request body: %v", err)
 	}
 
-	res, err := s.httpClient.Post(s.sendURL, "application/json", bytes.NewBuffer(reqBytes))
+	req, err := http.NewRequest("POST", s.sendURL, bytes.NewBuffer(reqBytes))
+	if err != nil {
+		return fmt.Errorf("create http reqeust: %v", err)
+	}
+
+	req.Header.Add("Content-Type", "application/json")
+
+	res, err := s.httpClient.Do(
+		req.WithContext(ctx),
+	)
 	if err != nil {
 		return fmt.Errorf("send message to telegram: %v", err)
 	}

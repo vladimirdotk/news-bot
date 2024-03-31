@@ -31,15 +31,15 @@ loop:
 		case <-ctx.Done():
 			break loop
 		case <-ticker.C:
-			if err := c.run(); err != nil {
+			if err := c.run(ctx); err != nil {
 				log.Printf("collector run: %v", err)
 			}
 		}
 	}
 }
 
-func (c *Collector) run() error {
-	tasks, err := c.tasks()
+func (c *Collector) run(ctx context.Context) error {
+	tasks, err := c.tasks(ctx)
 	if err != nil {
 		return fmt.Errorf("get tasks: %v", err)
 	}
@@ -56,8 +56,7 @@ func (c *Collector) run() error {
 	return nil
 }
 
-func (c *Collector) tasks() ([]domain.Task, error) {
-	ctx := context.TODO()
+func (c *Collector) tasks(ctx context.Context) ([]domain.Task, error) {
 	keys, err := c.redisClient.Keys(ctx, "*").Result()
 	if err != nil {
 		return nil, fmt.Errorf("get users and sources: %v", err)
@@ -71,7 +70,6 @@ func (c *Collector) tasks() ([]domain.Task, error) {
 			return nil, fmt.Errorf("extract user from key=%s: %v", key, err)
 		}
 
-		ctx := context.TODO()
 		rawSource, err := c.redisClient.Get(ctx, key).Result()
 		if err != nil {
 			return nil, fmt.Errorf("get key=%s raw source: %v", key, err)

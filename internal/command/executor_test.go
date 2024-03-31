@@ -1,6 +1,7 @@
 package command
 
 import (
+	"context"
 	"testing"
 
 	"github.com/go-redis/redismock/v9"
@@ -24,7 +25,7 @@ func TestExecutor_Exec(t *testing.T) {
 			executorFunc: func(mc minimock.MockController, t *testing.T) *Executor {
 				sourceDetector := mocks.NewSourceDetectorMock(t)
 				sourceDetector.DetectMock.
-					Expect("https://habr.com/ru/rss/all/all/").
+					Expect(context.TODO(), "https://habr.com/ru/rss/all/all/").
 					Return(domain.SourceTypeRSS)
 
 				sourceJSON, err := domain.SourceToJSON(&domain.Source{
@@ -41,11 +42,14 @@ func TestExecutor_Exec(t *testing.T) {
 				mock.ExpectSAdd(key, sourceJSON).SetVal(0)
 
 				responseSender := mocks.NewResponseSenderMock(t)
-				responseSender.SendMock.Expect(domain.OutgoingMessage{
-					UserID:      "u1",
-					Text:        "Источник добавлен",
-					Destination: domain.MessageSystemTelegram,
-				}).
+				responseSender.SendMock.Expect(
+					context.TODO(),
+					domain.OutgoingMessage{
+						UserID:      "u1",
+						Text:        "Источник добавлен",
+						Destination: domain.MessageSystemTelegram,
+					},
+				).
 					Return(nil)
 
 				return &Executor{
@@ -78,11 +82,14 @@ func TestExecutor_Exec(t *testing.T) {
 				mock.ExpectSAdd(key, sourceJSON).SetVal(0)
 
 				responseSender := mocks.NewResponseSenderMock(t)
-				responseSender.SendMock.Expect(domain.OutgoingMessage{
-					UserID:      "u1",
-					Text:        "Источник добавлен",
-					Destination: domain.MessageSystemTelegram,
-				}).
+				responseSender.SendMock.Expect(
+					context.TODO(),
+					domain.OutgoingMessage{
+						UserID:      "u1",
+						Text:        "Источник добавлен",
+						Destination: domain.MessageSystemTelegram,
+					},
+				).
 					Return(nil)
 
 				return &Executor{
@@ -112,11 +119,14 @@ func TestExecutor_Exec(t *testing.T) {
 					)
 
 				responseSender := mocks.NewResponseSenderMock(t)
-				responseSender.SendMock.Expect(domain.OutgoingMessage{
-					UserID:      "u1",
-					Text:        "https://news.yandex.ru/health.rss\nhttps://habr.com/ru/rss/all/all/",
-					Destination: domain.MessageSystemTelegram,
-				}).
+				responseSender.SendMock.Expect(
+					context.TODO(),
+					domain.OutgoingMessage{
+						UserID:      "u1",
+						Text:        "https://news.yandex.ru/health.rss\nhttps://habr.com/ru/rss/all/all/",
+						Destination: domain.MessageSystemTelegram,
+					},
+				).
 					Return(nil)
 
 				return &Executor{
@@ -140,7 +150,7 @@ func TestExecutor_Exec(t *testing.T) {
 			mc := minimock.NewController(t)
 
 			handler := tc.executorFunc(mc, t)
-			err := handler.Exec(tc.incomingMessage)
+			err := handler.Exec(context.TODO(), tc.incomingMessage)
 			assert.Equal(t, tc.err, err)
 		})
 	}

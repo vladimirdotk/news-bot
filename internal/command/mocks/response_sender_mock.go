@@ -3,6 +3,7 @@
 package mocks
 
 import (
+	"context"
 	"sync"
 	mm_atomic "sync/atomic"
 	mm_time "time"
@@ -16,8 +17,8 @@ type ResponseSenderMock struct {
 	t          minimock.Tester
 	finishOnce sync.Once
 
-	funcSend          func(message domain.OutgoingMessage) (err error)
-	inspectFuncSend   func(message domain.OutgoingMessage)
+	funcSend          func(ctx context.Context, message domain.OutgoingMessage) (err error)
+	inspectFuncSend   func(ctx context.Context, message domain.OutgoingMessage)
 	afterSendCounter  uint64
 	beforeSendCounter uint64
 	SendMock          mResponseSenderMockSend
@@ -58,6 +59,7 @@ type ResponseSenderMockSendExpectation struct {
 
 // ResponseSenderMockSendParams contains parameters of the ResponseSender.Send
 type ResponseSenderMockSendParams struct {
+	ctx     context.Context
 	message domain.OutgoingMessage
 }
 
@@ -67,7 +69,7 @@ type ResponseSenderMockSendResults struct {
 }
 
 // Expect sets up expected params for ResponseSender.Send
-func (mmSend *mResponseSenderMockSend) Expect(message domain.OutgoingMessage) *mResponseSenderMockSend {
+func (mmSend *mResponseSenderMockSend) Expect(ctx context.Context, message domain.OutgoingMessage) *mResponseSenderMockSend {
 	if mmSend.mock.funcSend != nil {
 		mmSend.mock.t.Fatalf("ResponseSenderMock.Send mock is already set by Set")
 	}
@@ -76,7 +78,7 @@ func (mmSend *mResponseSenderMockSend) Expect(message domain.OutgoingMessage) *m
 		mmSend.defaultExpectation = &ResponseSenderMockSendExpectation{}
 	}
 
-	mmSend.defaultExpectation.params = &ResponseSenderMockSendParams{message}
+	mmSend.defaultExpectation.params = &ResponseSenderMockSendParams{ctx, message}
 	for _, e := range mmSend.expectations {
 		if minimock.Equal(e.params, mmSend.defaultExpectation.params) {
 			mmSend.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmSend.defaultExpectation.params)
@@ -87,7 +89,7 @@ func (mmSend *mResponseSenderMockSend) Expect(message domain.OutgoingMessage) *m
 }
 
 // Inspect accepts an inspector function that has same arguments as the ResponseSender.Send
-func (mmSend *mResponseSenderMockSend) Inspect(f func(message domain.OutgoingMessage)) *mResponseSenderMockSend {
+func (mmSend *mResponseSenderMockSend) Inspect(f func(ctx context.Context, message domain.OutgoingMessage)) *mResponseSenderMockSend {
 	if mmSend.mock.inspectFuncSend != nil {
 		mmSend.mock.t.Fatalf("Inspect function is already set for ResponseSenderMock.Send")
 	}
@@ -111,7 +113,7 @@ func (mmSend *mResponseSenderMockSend) Return(err error) *ResponseSenderMock {
 }
 
 // Set uses given function f to mock the ResponseSender.Send method
-func (mmSend *mResponseSenderMockSend) Set(f func(message domain.OutgoingMessage) (err error)) *ResponseSenderMock {
+func (mmSend *mResponseSenderMockSend) Set(f func(ctx context.Context, message domain.OutgoingMessage) (err error)) *ResponseSenderMock {
 	if mmSend.defaultExpectation != nil {
 		mmSend.mock.t.Fatalf("Default expectation is already set for the ResponseSender.Send method")
 	}
@@ -126,14 +128,14 @@ func (mmSend *mResponseSenderMockSend) Set(f func(message domain.OutgoingMessage
 
 // When sets expectation for the ResponseSender.Send which will trigger the result defined by the following
 // Then helper
-func (mmSend *mResponseSenderMockSend) When(message domain.OutgoingMessage) *ResponseSenderMockSendExpectation {
+func (mmSend *mResponseSenderMockSend) When(ctx context.Context, message domain.OutgoingMessage) *ResponseSenderMockSendExpectation {
 	if mmSend.mock.funcSend != nil {
 		mmSend.mock.t.Fatalf("ResponseSenderMock.Send mock is already set by Set")
 	}
 
 	expectation := &ResponseSenderMockSendExpectation{
 		mock:   mmSend.mock,
-		params: &ResponseSenderMockSendParams{message},
+		params: &ResponseSenderMockSendParams{ctx, message},
 	}
 	mmSend.expectations = append(mmSend.expectations, expectation)
 	return expectation
@@ -146,15 +148,15 @@ func (e *ResponseSenderMockSendExpectation) Then(err error) *ResponseSenderMock 
 }
 
 // Send implements command.ResponseSender
-func (mmSend *ResponseSenderMock) Send(message domain.OutgoingMessage) (err error) {
+func (mmSend *ResponseSenderMock) Send(ctx context.Context, message domain.OutgoingMessage) (err error) {
 	mm_atomic.AddUint64(&mmSend.beforeSendCounter, 1)
 	defer mm_atomic.AddUint64(&mmSend.afterSendCounter, 1)
 
 	if mmSend.inspectFuncSend != nil {
-		mmSend.inspectFuncSend(message)
+		mmSend.inspectFuncSend(ctx, message)
 	}
 
-	mm_params := ResponseSenderMockSendParams{message}
+	mm_params := ResponseSenderMockSendParams{ctx, message}
 
 	// Record call args
 	mmSend.SendMock.mutex.Lock()
@@ -171,7 +173,7 @@ func (mmSend *ResponseSenderMock) Send(message domain.OutgoingMessage) (err erro
 	if mmSend.SendMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmSend.SendMock.defaultExpectation.Counter, 1)
 		mm_want := mmSend.SendMock.defaultExpectation.params
-		mm_got := ResponseSenderMockSendParams{message}
+		mm_got := ResponseSenderMockSendParams{ctx, message}
 		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
 			mmSend.t.Errorf("ResponseSenderMock.Send got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
@@ -183,9 +185,9 @@ func (mmSend *ResponseSenderMock) Send(message domain.OutgoingMessage) (err erro
 		return (*mm_results).err
 	}
 	if mmSend.funcSend != nil {
-		return mmSend.funcSend(message)
+		return mmSend.funcSend(ctx, message)
 	}
-	mmSend.t.Fatalf("Unexpected call to ResponseSenderMock.Send. %v", message)
+	mmSend.t.Fatalf("Unexpected call to ResponseSenderMock.Send. %v %v", ctx, message)
 	return
 }
 

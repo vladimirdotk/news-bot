@@ -1,6 +1,8 @@
 package command
 
 import (
+	"context"
+
 	"github.com/vladimirdotk/news-bot/internal/domain"
 )
 
@@ -9,7 +11,7 @@ import (
 // ResponseSender describes message sender.
 type ResponseSender interface {
 	// Send sends message, returns error if any.
-	Send(message domain.OutgoingMessage) error
+	Send(ctx context.Context, message domain.OutgoingMessage) error
 }
 
 //go:generate minimock -g -i github.com/vladimirdotk/news-bot/internal/command.QueueService -o ./mocks -s "_mock.go"
@@ -17,7 +19,7 @@ type ResponseSender interface {
 // QueueService describes a service for working with queue.
 type QueueService interface {
 	// Publish sets message with certain topic to queue.
-	Publish(topic domain.QueueTopic, data interface{}) error
+	Publish(ctx context.Context, topic domain.QueueTopic, data interface{}) error
 }
 
 //go:generate minimock -g -i github.com/vladimirdotk/news-bot/internal/command.SourceDetector -o ./mocks -s "_mock.go"
@@ -25,5 +27,5 @@ type QueueService interface {
 // SourceDetector describes a service that detects different sources types.
 type SourceDetector interface {
 	// Detect finds out and return source type.
-	Detect(sourceURL string) domain.SourceType
+	Detect(ctx context.Context, sourceURL string) domain.SourceType
 }

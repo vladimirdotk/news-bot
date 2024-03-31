@@ -1,6 +1,7 @@
 package command
 
 import (
+	"context"
 	"encoding/json"
 	"testing"
 
@@ -31,7 +32,7 @@ func TestHandler_Handle(t *testing.T) {
 				require.NoError(t, err)
 				queueService := mocks.NewQueueServiceMock(t)
 				queueService.PublishMock.
-					Expect("incoming_command", commandBytes).
+					Expect(context.TODO(), "incoming_command", commandBytes).
 					Return(nil)
 
 				return &Handler{queueService: queueService}
@@ -52,7 +53,7 @@ func TestHandler_Handle(t *testing.T) {
 			mc := minimock.NewController(t)
 
 			handler := tc.handlerFunc(mc, t)
-			err := handler.Handle(tc.incomingMessage)
+			err := handler.Handle(context.TODO(), tc.incomingMessage)
 			assert.Equal(t, tc.err, err)
 		})
 	}

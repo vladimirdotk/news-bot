@@ -24,20 +24,20 @@ func NewExecutor(redisClient redis.Cmdable, responseSender ResponseSender, sourc
 	}
 }
 
-func (e *Executor) Exec(message domain.IncomingMessage) error {
+func (e *Executor) Exec(ctx context.Context, message domain.IncomingMessage) error {
 	if strings.HasPrefix(message.Text, domain.MessageCommandAddSource) {
-		return e.addSource(message)
+		return e.addSource(ctx, message)
 	}
 
 	if strings.HasPrefix(message.Text, domain.MessageCommandListSource) {
-		return e.listSources(message)
+		return e.listSources(ctx, message)
 	}
 
 	return fmt.Errorf("executor not found for command: %s", message)
 }
 
 // addSource validates and adds source to user's list (if valid).
-func (e *Executor) addSource(message domain.IncomingMessage) error {
+func (e *Executor) addSource(ctx context.Context, message domain.IncomingMessage) error {
 	commandArgs, err := getCommandArgs(message.Text)
 	if err != nil {
 		return fmt.Errorf("get command args: %v", err)
@@ -46,15 +46,15 @@ func (e *Executor) addSource(message domain.IncomingMessage) error {
 	url := commandArgs[1]
 
 	key := domain.UserSourceKey(message.UserID, url)
-	exits, err := e.keyExists(key)
+	exits, err := e.keyExists(ctx, key)
 	if err != nil {
 		return fmt.Errorf("key exists: %v", err)
 	}
 	if exits {
-		return e.sendSuccessMessage(message)
+		return e.sendSuccessMessage(ctx, message)
 	}
 
-	sourceType := e.sourceDetector.Detect(commandArgs[1])
+	sourceType := e.sourceDetector.Detect(ctx, commandArgs[1])
 	if sourceType == domain.SourceTypeUnknown {
 		return fmt.Errorf("unknown source by URL: %v", commandArgs[1])
 	}
@@ -67,12 +67,11 @@ func (e *Executor) addSource(message domain.IncomingMessage) error {
 		return fmt.Errorf("source to JSON: %v", err)
 	}
 
-	ctx := context.TODO()
 	if err := e.redisClient.SAdd(ctx, key, sourceJSON).Err(); err != nil {
 		return fmt.Errorf("sadd, key: %s, value: %s, err: %v", message.UserID, string(sourceJSON), err)
 	}
 
-	if err := e.sendSuccessMessage(message); err != nil {
+	if err := e.sendSuccessMessage(ctx, message); err != nil {
 		return fmt.Errorf("send success message: %v", err)
 	}
 
@@ -80,10 +79,9 @@ func (e *Executor) addSource(message domain.IncomingMessage) error {
 }
 
 // listSources sends user's sources list if any.
-func (e *Executor) listSources(message domain.IncomingMessage) error {
+func (e *Executor) listSources(ctx context.Context, message domain.IncomingMessage) error {
 	key := domain.UserSourcesSearchKey(message.UserID)
 
-	ctx := context.TODO()
 	sources, err := e.redisClient.SMembers(ctx, key).Result()
 	if err != nil {
 		return fmt.Errorf("smembers, key: %s, err: %v", key, err)
@@ -102,7 +100,8 @@ func (e *Executor) listSources(message domain.IncomingMessage) error {
 	if len(sources) == 0 {
 		outgoingMessage.Text = "Источники не найдены"
 	}
-	if err := e.responseSender.Send(outgoingMessage); err != nil {
+
+	if err := e.responseSender.Send(ctx, outgoingMessage); err != nil {
 		return fmt.Errorf("send response: %v", err)
 	}
 
@@ -128,18 +127,17 @@ func toOutgoingMessage(src domain.IncomingMessage, text string) domain.OutgoingM
 	}
 }
 
-func (e *Executor) sendSuccessMessage(message domain.IncomingMessage) error {
+func (e *Executor) sendSuccessMessage(ctx context.Context, message domain.IncomingMessage) error {
 	outgoingMessage := toOutgoingMessage(message, "Источник добавлен")
 
-	if err := e.responseSender.Send(outgoingMessage); err != nil {
+	if err := e.responseSender.Send(ctx, outgoingMessage); err != nil {
 		return fmt.Errorf("send response: %v", err)
 	}
 
 	return nil
 }
 
-func (e *Executor) keyExists(key string) (bool, error) {
-	ctx := context.TODO()
+func (e *Executor) keyExists(ctx context.Context, key string) (bool, error) {
 	res := e.redisClient.Exists(ctx, key)
 
 	if res.Err() != nil {

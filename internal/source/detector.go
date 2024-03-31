@@ -1,6 +1,8 @@
 package source
 
 import (
+	"context"
+
 	"github.com/mmcdole/gofeed"
 	"github.com/vladimirdotk/news-bot/internal/domain"
 )
@@ -16,7 +18,7 @@ func NewDetector() *Detector {
 	}
 }
 
-func (d *Detector) Detect(sourceURL string) domain.SourceType {
+func (d *Detector) Detect(ctx context.Context, sourceURL string) domain.SourceType {
 	_, err := d.rssParser.ParseURL(sourceURL)
 	if err != nil {
 		return domain.SourceTypeUnknown

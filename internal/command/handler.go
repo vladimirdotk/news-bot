@@ -1,6 +1,7 @@
 package command
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 
@@ -17,13 +18,13 @@ func NewHandler(queueService QueueService) *Handler {
 	}
 }
 
-func (h *Handler) Handle(command *domain.IncomingMessage) error {
+func (h *Handler) Handle(ctx context.Context, command *domain.IncomingMessage) error {
 	marshaledCommand, err := commandToJSON(command)
 	if err != nil {
 		return fmt.Errorf("convert command to JSON: %v", err)
 	}
 
-	if err := h.queueService.Publish(domain.QueueTopicIncomingCommand, marshaledCommand); err != nil {
+	if err := h.queueService.Publish(ctx, domain.QueueTopicIncomingCommand, marshaledCommand); err != nil {
 		return fmt.Errorf("publish incoming command: %v", err)
 	}
 
