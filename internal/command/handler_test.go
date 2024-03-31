@@ -50,7 +50,6 @@ func TestHandler_Handle(t *testing.T) {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			mc := minimock.NewController(t)
-			defer mc.Finish()
 
 			handler := tc.handlerFunc(mc, t)
 			err := handler.Handle(tc.incomingMessage)

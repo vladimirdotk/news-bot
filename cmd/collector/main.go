@@ -3,10 +3,11 @@ package main
 import (
 	"log"
 
+	"github.com/caarlos0/env/v10"
+
 	"github.com/vladimirdotk/news-bot/internal/news"
 
-	"github.com/caarlos0/env/v6"
-	"github.com/go-redis/redis/v7"
+	"github.com/redis/go-redis/v9"
 )
 
 func main() {

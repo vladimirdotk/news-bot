@@ -8,8 +8,9 @@ import (
 	"os/signal"
 	"sync"
 
-	"github.com/caarlos0/env/v6"
-	"github.com/go-redis/redis/v7"
+	"github.com/caarlos0/env/v10"
+
+	"github.com/redis/go-redis/v9"
 
 	"github.com/vladimirdotk/news-bot/internal/command"
 	redisprovider "github.com/vladimirdotk/news-bot/internal/provider/redis"

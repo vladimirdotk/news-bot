@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/go-redis/redis/v7"
+	"github.com/redis/go-redis/v9"
 
 	"github.com/vladimirdotk/news-bot/internal/domain"
 )
@@ -57,7 +57,8 @@ func (c *Collector) run() error {
 }
 
 func (c *Collector) tasks() ([]domain.Task, error) {
-	keys, err := c.redisClient.Keys("*").Result()
+	ctx := context.TODO()
+	keys, err := c.redisClient.Keys(ctx, "*").Result()
 	if err != nil {
 		return nil, fmt.Errorf("get users and sources: %v", err)
 	}
@@ -70,7 +71,8 @@ func (c *Collector) tasks() ([]domain.Task, error) {
 			return nil, fmt.Errorf("extract user from key=%s: %v", key, err)
 		}
 
-		rawSource, err := c.redisClient.Get(key).Result()
+		ctx := context.TODO()
+		rawSource, err := c.redisClient.Get(ctx, key).Result()
 		if err != nil {
 			return nil, fmt.Errorf("get key=%s raw source: %v", key, err)
 		}

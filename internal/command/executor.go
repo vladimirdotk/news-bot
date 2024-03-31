@@ -1,10 +1,11 @@
 package command
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
-	"github.com/go-redis/redis/v7"
+	"github.com/redis/go-redis/v9"
 
 	"github.com/vladimirdotk/news-bot/internal/domain"
 )
@@ -66,7 +67,8 @@ func (e *Executor) addSource(message domain.IncomingMessage) error {
 		return fmt.Errorf("source to JSON: %v", err)
 	}
 
-	if err := e.redisClient.SAdd(key, sourceJSON).Err(); err != nil {
+	ctx := context.TODO()
+	if err := e.redisClient.SAdd(ctx, key, sourceJSON).Err(); err != nil {
 		return fmt.Errorf("sadd, key: %s, value: %s, err: %v", message.UserID, string(sourceJSON), err)
 	}
 
@@ -81,7 +83,8 @@ func (e *Executor) addSource(message domain.IncomingMessage) error {
 func (e *Executor) listSources(message domain.IncomingMessage) error {
 	key := domain.UserSourcesSearchKey(message.UserID)
 
-	sources, err := e.redisClient.SMembers(key).Result()
+	ctx := context.TODO()
+	sources, err := e.redisClient.SMembers(ctx, key).Result()
 	if err != nil {
 		return fmt.Errorf("smembers, key: %s, err: %v", key, err)
 	}
@@ -136,7 +139,8 @@ func (e *Executor) sendSuccessMessage(message domain.IncomingMessage) error {
 }
 
 func (e *Executor) keyExists(key string) (bool, error) {
-	res := e.redisClient.Exists(key)
+	ctx := context.TODO()
+	res := e.redisClient.Exists(ctx, key)
 
 	if res.Err() != nil {
 		return false, fmt.Errorf("exists, key: %s, err: %v", key, res.Err())
