@@ -3,6 +3,7 @@
 package mocks
 
 import (
+	"context"
 	"sync"
 	mm_atomic "sync/atomic"
 	mm_time "time"
@@ -16,8 +17,8 @@ type SourceDetectorMock struct {
 	t          minimock.Tester
 	finishOnce sync.Once
 
-	funcDetect          func(sourceURL string) (s1 domain.SourceType)
-	inspectFuncDetect   func(sourceURL string)
+	funcDetect          func(ctx context.Context, sourceURL string) (s1 domain.SourceType)
+	inspectFuncDetect   func(ctx context.Context, sourceURL string)
 	afterDetectCounter  uint64
 	beforeDetectCounter uint64
 	DetectMock          mSourceDetectorMockDetect
@@ -58,6 +59,7 @@ type SourceDetectorMockDetectExpectation struct {
 
 // SourceDetectorMockDetectParams contains parameters of the SourceDetector.Detect
 type SourceDetectorMockDetectParams struct {
+	ctx       context.Context
 	sourceURL string
 }
 
@@ -67,7 +69,7 @@ type SourceDetectorMockDetectResults struct {
 }
 
 // Expect sets up expected params for SourceDetector.Detect
-func (mmDetect *mSourceDetectorMockDetect) Expect(sourceURL string) *mSourceDetectorMockDetect {
+func (mmDetect *mSourceDetectorMockDetect) Expect(ctx context.Context, sourceURL string) *mSourceDetectorMockDetect {
 	if mmDetect.mock.funcDetect != nil {
 		mmDetect.mock.t.Fatalf("SourceDetectorMock.Detect mock is already set by Set")
 	}
@@ -76,7 +78,7 @@ func (mmDetect *mSourceDetectorMockDetect) Expect(sourceURL string) *mSourceDete
 		mmDetect.defaultExpectation = &SourceDetectorMockDetectExpectation{}
 	}
 
-	mmDetect.defaultExpectation.params = &SourceDetectorMockDetectParams{sourceURL}
+	mmDetect.defaultExpectation.params = &SourceDetectorMockDetectParams{ctx, sourceURL}
 	for _, e := range mmDetect.expectations {
 		if minimock.Equal(e.params, mmDetect.defaultExpectation.params) {
 			mmDetect.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmDetect.defaultExpectation.params)
@@ -87,7 +89,7 @@ func (mmDetect *mSourceDetectorMockDetect) Expect(sourceURL string) *mSourceDete
 }
 
 // Inspect accepts an inspector function that has same arguments as the SourceDetector.Detect
-func (mmDetect *mSourceDetectorMockDetect) Inspect(f func(sourceURL string)) *mSourceDetectorMockDetect {
+func (mmDetect *mSourceDetectorMockDetect) Inspect(f func(ctx context.Context, sourceURL string)) *mSourceDetectorMockDetect {
 	if mmDetect.mock.inspectFuncDetect != nil {
 		mmDetect.mock.t.Fatalf("Inspect function is already set for SourceDetectorMock.Detect")
 	}
@@ -111,7 +113,7 @@ func (mmDetect *mSourceDetectorMockDetect) Return(s1 domain.SourceType) *SourceD
 }
 
 // Set uses given function f to mock the SourceDetector.Detect method
-func (mmDetect *mSourceDetectorMockDetect) Set(f func(sourceURL string) (s1 domain.SourceType)) *SourceDetectorMock {
+func (mmDetect *mSourceDetectorMockDetect) Set(f func(ctx context.Context, sourceURL string) (s1 domain.SourceType)) *SourceDetectorMock {
 	if mmDetect.defaultExpectation != nil {
 		mmDetect.mock.t.Fatalf("Default expectation is already set for the SourceDetector.Detect method")
 	}
@@ -126,14 +128,14 @@ func (mmDetect *mSourceDetectorMockDetect) Set(f func(sourceURL string) (s1 doma
 
 // When sets expectation for the SourceDetector.Detect which will trigger the result defined by the following
 // Then helper
-func (mmDetect *mSourceDetectorMockDetect) When(sourceURL string) *SourceDetectorMockDetectExpectation {
+func (mmDetect *mSourceDetectorMockDetect) When(ctx context.Context, sourceURL string) *SourceDetectorMockDetectExpectation {
 	if mmDetect.mock.funcDetect != nil {
 		mmDetect.mock.t.Fatalf("SourceDetectorMock.Detect mock is already set by Set")
 	}
 
 	expectation := &SourceDetectorMockDetectExpectation{
 		mock:   mmDetect.mock,
-		params: &SourceDetectorMockDetectParams{sourceURL},
+		params: &SourceDetectorMockDetectParams{ctx, sourceURL},
 	}
 	mmDetect.expectations = append(mmDetect.expectations, expectation)
 	return expectation
@@ -146,15 +148,15 @@ func (e *SourceDetectorMockDetectExpectation) Then(s1 domain.SourceType) *Source
 }
 
 // Detect implements command.SourceDetector
-func (mmDetect *SourceDetectorMock) Detect(sourceURL string) (s1 domain.SourceType) {
+func (mmDetect *SourceDetectorMock) Detect(ctx context.Context, sourceURL string) (s1 domain.SourceType) {
 	mm_atomic.AddUint64(&mmDetect.beforeDetectCounter, 1)
 	defer mm_atomic.AddUint64(&mmDetect.afterDetectCounter, 1)
 
 	if mmDetect.inspectFuncDetect != nil {
-		mmDetect.inspectFuncDetect(sourceURL)
+		mmDetect.inspectFuncDetect(ctx, sourceURL)
 	}
 
-	mm_params := SourceDetectorMockDetectParams{sourceURL}
+	mm_params := SourceDetectorMockDetectParams{ctx, sourceURL}
 
 	// Record call args
 	mmDetect.DetectMock.mutex.Lock()
@@ -171,7 +173,7 @@ func (mmDetect *SourceDetectorMock) Detect(sourceURL string) (s1 domain.SourceTy
 	if mmDetect.DetectMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmDetect.DetectMock.defaultExpectation.Counter, 1)
 		mm_want := mmDetect.DetectMock.defaultExpectation.params
-		mm_got := SourceDetectorMockDetectParams{sourceURL}
+		mm_got := SourceDetectorMockDetectParams{ctx, sourceURL}
 		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
 			mmDetect.t.Errorf("SourceDetectorMock.Detect got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
@@ -183,9 +185,9 @@ func (mmDetect *SourceDetectorMock) Detect(sourceURL string) (s1 domain.SourceTy
 		return (*mm_results).s1
 	}
 	if mmDetect.funcDetect != nil {
-		return mmDetect.funcDetect(sourceURL)
+		return mmDetect.funcDetect(ctx, sourceURL)
 	}
-	mmDetect.t.Fatalf("Unexpected call to SourceDetectorMock.Detect. %v", sourceURL)
+	mmDetect.t.Fatalf("Unexpected call to SourceDetectorMock.Detect. %v %v", ctx, sourceURL)
 	return
 }
 

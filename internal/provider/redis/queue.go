@@ -17,8 +17,7 @@ func NewQueueService(redisClient *redis.Client) *QueueService {
 	return &QueueService{redisClient: redisClient}
 }
 
-func (q *QueueService) Publish(topic domain.QueueTopic, data interface{}) error {
-	ctx := context.TODO()
+func (q *QueueService) Publish(ctx context.Context, topic domain.QueueTopic, data interface{}) error {
 	if err := q.redisClient.RPush(ctx, topic.String(), data).Err(); err != nil {
 		return fmt.Errorf("rpush to redis: %v", err)
 	}

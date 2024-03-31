@@ -40,16 +40,20 @@ loop:
 			log.Printf("Worker context is done")
 			break loop
 		case <-ticker.C:
-			if err := w.execute(); err != nil {
+			if err := w.execute(ctx); err != nil {
 				log.Printf("Worker execute: %v", err)
 			}
 		}
 	}
 }
 
-func (w *Worker) execute() error {
-	ctx := context.TODO()
-	response, err := w.redisClient.BLPop(ctx, time.Second*2, domain.QueueTopicIncomingCommand.String()).Result()
+func (w *Worker) execute(ctx context.Context) error {
+	response, err := w.redisClient.
+		BLPop(
+			ctx, time.Second*2,
+			domain.QueueTopicIncomingCommand.String(),
+		).
+		Result()
 	if err == redis.Nil {
 		return nil
 	}
@@ -67,7 +71,7 @@ func (w *Worker) execute() error {
 		return fmt.Errorf("to incoming message: %v", err)
 	}
 
-	return w.commandExecutor.Exec(*incomingMessage)
+	return w.commandExecutor.Exec(ctx, *incomingMessage)
 }
 
 func toIncomingMessage(src string) (*domain.IncomingMessage, error) {

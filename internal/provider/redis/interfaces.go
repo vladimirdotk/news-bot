@@ -1,6 +1,10 @@
 package redis
 
-import "github.com/vladimirdotk/news-bot/internal/domain"
+import (
+	"context"
+
+	"github.com/vladimirdotk/news-bot/internal/domain"
+)
 
 //go:generate minimock -g -i github.com/vladimirdotk/news-bot/internal/provider/redis.CommandExecutor -o ./mocks -s "_mock.go"
 
@@ -8,5 +12,5 @@ import "github.com/vladimirdotk/news-bot/internal/domain"
 // received from different message systems.
 type CommandExecutor interface {
 	// Exec executes user's command and returns an error if any.
-	Exec(message domain.IncomingMessage) error
+	Exec(ctx context.Context, message domain.IncomingMessage) error
 }

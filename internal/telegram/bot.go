@@ -1,6 +1,7 @@
 package telegram
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"strconv"
@@ -40,6 +41,9 @@ func NewBot(token string, messageHandler MessageHandler, debug bool) (*Bot, erro
 }
 
 func (b *Bot) Run() {
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	defer cancelFunc()
+
 	for update := range b.updatesChan {
 		if update.Message == nil { // ignore any non-Message Updates
 			continue
@@ -52,15 +56,15 @@ func (b *Bot) Run() {
 			continue
 		}
 
-		if err := b.messageHandler.Handle(incomingMessage); err != nil {
+		if err := b.messageHandler.Handle(ctx, incomingMessage); err != nil {
 			log.Printf("handle message: %v", err)
-			b.answer(update.Message.Chat.ID, update.Message.MessageID, "Произошла ошибка")
+			b.reply(update.Message.Chat.ID, update.Message.MessageID, "Произошла ошибка")
 			continue
 		}
 	}
 }
 
-func (b *Bot) answer(chatID int64, replyToMessageID int, text string) {
+func (b *Bot) reply(chatID int64, replyToMessageID int, text string) {
 	message := tgbotapi.NewMessage(chatID, text)
 	message.ReplyToMessageID = replyToMessageID
 	b.send(message)

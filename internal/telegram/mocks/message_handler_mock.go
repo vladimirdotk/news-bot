@@ -3,6 +3,7 @@
 package mocks
 
 import (
+	"context"
 	"sync"
 	mm_atomic "sync/atomic"
 	mm_time "time"
@@ -16,8 +17,8 @@ type MessageHandlerMock struct {
 	t          minimock.Tester
 	finishOnce sync.Once
 
-	funcHandle          func(message *domain.IncomingMessage) (err error)
-	inspectFuncHandle   func(message *domain.IncomingMessage)
+	funcHandle          func(ctx context.Context, message *domain.IncomingMessage) (err error)
+	inspectFuncHandle   func(ctx context.Context, message *domain.IncomingMessage)
 	afterHandleCounter  uint64
 	beforeHandleCounter uint64
 	HandleMock          mMessageHandlerMockHandle
@@ -58,6 +59,7 @@ type MessageHandlerMockHandleExpectation struct {
 
 // MessageHandlerMockHandleParams contains parameters of the MessageHandler.Handle
 type MessageHandlerMockHandleParams struct {
+	ctx     context.Context
 	message *domain.IncomingMessage
 }
 
@@ -67,7 +69,7 @@ type MessageHandlerMockHandleResults struct {
 }
 
 // Expect sets up expected params for MessageHandler.Handle
-func (mmHandle *mMessageHandlerMockHandle) Expect(message *domain.IncomingMessage) *mMessageHandlerMockHandle {
+func (mmHandle *mMessageHandlerMockHandle) Expect(ctx context.Context, message *domain.IncomingMessage) *mMessageHandlerMockHandle {
 	if mmHandle.mock.funcHandle != nil {
 		mmHandle.mock.t.Fatalf("MessageHandlerMock.Handle mock is already set by Set")
 	}
@@ -76,7 +78,7 @@ func (mmHandle *mMessageHandlerMockHandle) Expect(message *domain.IncomingMessag
 		mmHandle.defaultExpectation = &MessageHandlerMockHandleExpectation{}
 	}
 
-	mmHandle.defaultExpectation.params = &MessageHandlerMockHandleParams{message}
+	mmHandle.defaultExpectation.params = &MessageHandlerMockHandleParams{ctx, message}
 	for _, e := range mmHandle.expectations {
 		if minimock.Equal(e.params, mmHandle.defaultExpectation.params) {
 			mmHandle.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmHandle.defaultExpectation.params)
@@ -87,7 +89,7 @@ func (mmHandle *mMessageHandlerMockHandle) Expect(message *domain.IncomingMessag
 }
 
 // Inspect accepts an inspector function that has same arguments as the MessageHandler.Handle
-func (mmHandle *mMessageHandlerMockHandle) Inspect(f func(message *domain.IncomingMessage)) *mMessageHandlerMockHandle {
+func (mmHandle *mMessageHandlerMockHandle) Inspect(f func(ctx context.Context, message *domain.IncomingMessage)) *mMessageHandlerMockHandle {
 	if mmHandle.mock.inspectFuncHandle != nil {
 		mmHandle.mock.t.Fatalf("Inspect function is already set for MessageHandlerMock.Handle")
 	}
@@ -111,7 +113,7 @@ func (mmHandle *mMessageHandlerMockHandle) Return(err error) *MessageHandlerMock
 }
 
 // Set uses given function f to mock the MessageHandler.Handle method
-func (mmHandle *mMessageHandlerMockHandle) Set(f func(message *domain.IncomingMessage) (err error)) *MessageHandlerMock {
+func (mmHandle *mMessageHandlerMockHandle) Set(f func(ctx context.Context, message *domain.IncomingMessage) (err error)) *MessageHandlerMock {
 	if mmHandle.defaultExpectation != nil {
 		mmHandle.mock.t.Fatalf("Default expectation is already set for the MessageHandler.Handle method")
 	}
@@ -126,14 +128,14 @@ func (mmHandle *mMessageHandlerMockHandle) Set(f func(message *domain.IncomingMe
 
 // When sets expectation for the MessageHandler.Handle which will trigger the result defined by the following
 // Then helper
-func (mmHandle *mMessageHandlerMockHandle) When(message *domain.IncomingMessage) *MessageHandlerMockHandleExpectation {
+func (mmHandle *mMessageHandlerMockHandle) When(ctx context.Context, message *domain.IncomingMessage) *MessageHandlerMockHandleExpectation {
 	if mmHandle.mock.funcHandle != nil {
 		mmHandle.mock.t.Fatalf("MessageHandlerMock.Handle mock is already set by Set")
 	}
 
 	expectation := &MessageHandlerMockHandleExpectation{
 		mock:   mmHandle.mock,
-		params: &MessageHandlerMockHandleParams{message},
+		params: &MessageHandlerMockHandleParams{ctx, message},
 	}
 	mmHandle.expectations = append(mmHandle.expectations, expectation)
 	return expectation
@@ -146,15 +148,15 @@ func (e *MessageHandlerMockHandleExpectation) Then(err error) *MessageHandlerMoc
 }
 
 // Handle implements telegram.MessageHandler
-func (mmHandle *MessageHandlerMock) Handle(message *domain.IncomingMessage) (err error) {
+func (mmHandle *MessageHandlerMock) Handle(ctx context.Context, message *domain.IncomingMessage) (err error) {
 	mm_atomic.AddUint64(&mmHandle.beforeHandleCounter, 1)
 	defer mm_atomic.AddUint64(&mmHandle.afterHandleCounter, 1)
 
 	if mmHandle.inspectFuncHandle != nil {
-		mmHandle.inspectFuncHandle(message)
+		mmHandle.inspectFuncHandle(ctx, message)
 	}
 
-	mm_params := MessageHandlerMockHandleParams{message}
+	mm_params := MessageHandlerMockHandleParams{ctx, message}
 
 	// Record call args
 	mmHandle.HandleMock.mutex.Lock()
@@ -171,7 +173,7 @@ func (mmHandle *MessageHandlerMock) Handle(message *domain.IncomingMessage) (err
 	if mmHandle.HandleMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmHandle.HandleMock.defaultExpectation.Counter, 1)
 		mm_want := mmHandle.HandleMock.defaultExpectation.params
-		mm_got := MessageHandlerMockHandleParams{message}
+		mm_got := MessageHandlerMockHandleParams{ctx, message}
 		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
 			mmHandle.t.Errorf("MessageHandlerMock.Handle got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
@@ -183,9 +185,9 @@ func (mmHandle *MessageHandlerMock) Handle(message *domain.IncomingMessage) (err
 		return (*mm_results).err
 	}
 	if mmHandle.funcHandle != nil {
-		return mmHandle.funcHandle(message)
+		return mmHandle.funcHandle(ctx, message)
 	}
-	mmHandle.t.Fatalf("Unexpected call to MessageHandlerMock.Handle. %v", message)
+	mmHandle.t.Fatalf("Unexpected call to MessageHandlerMock.Handle. %v %v", ctx, message)
 	return
 }
 
