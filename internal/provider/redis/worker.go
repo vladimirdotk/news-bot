@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"sync"
 	"time"
 
@@ -16,12 +16,14 @@ import (
 type Worker struct {
 	redisClient     redis.Cmdable
 	commandExecutor CommandExecutor
+	log             *slog.Logger
 }
 
-func NewWorker(redisClient redis.Cmdable, commandExecutor CommandExecutor) *Worker {
+func NewWorker(redisClient redis.Cmdable, commandExecutor CommandExecutor, log *slog.Logger) *Worker {
 	return &Worker{
 		redisClient:     redisClient,
 		commandExecutor: commandExecutor,
+		log:             log,
 	}
 }
 
@@ -29,7 +31,7 @@ func NewWorker(redisClient redis.Cmdable, commandExecutor CommandExecutor) *Work
 func (w *Worker) Run(ctx context.Context, wg *sync.WaitGroup) {
 	defer wg.Done()
 
-	log.Printf("Starting worker...")
+	w.log.Info("Starting worker...")
 
 	ticker := time.NewTicker(time.Second)
 
@@ -37,11 +39,11 @@ loop:
 	for {
 		select {
 		case <-ctx.Done():
-			log.Printf("Worker context is done")
+			w.log.Info("Worker context is done")
 			break loop
 		case <-ticker.C:
 			if err := w.execute(ctx); err != nil {
-				log.Printf("Worker execute: %v", err)
+				w.log.Info("Worker execute: %v", err)
 			}
 		}
 	}

@@ -3,7 +3,7 @@ package news
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"sync"
 	"time"
 
@@ -14,11 +14,13 @@ import (
 
 type Collector struct {
 	redisClient redis.Cmdable
+	log         *slog.Logger
 }
 
-func NewCollector(redisClient redis.Cmdable) *Collector {
+func NewCollector(redisClient redis.Cmdable, log *slog.Logger) *Collector {
 	return &Collector{
 		redisClient: redisClient,
+		log:         log,
 	}
 }
 
@@ -32,7 +34,10 @@ loop:
 			break loop
 		case <-ticker.C:
 			if err := c.run(ctx); err != nil {
-				log.Printf("collector run: %v", err)
+				c.log.Error(
+					"collector run",
+					slog.String("error", err.Error()),
+				)
 			}
 		}
 	}
