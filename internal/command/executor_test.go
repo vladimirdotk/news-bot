@@ -138,7 +138,6 @@ func TestExecutor_Exec(t *testing.T) {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			mc := minimock.NewController(t)
-			defer mc.Finish()
 
 			handler := tc.executorFunc(mc, t)
 			err := handler.Exec(tc.incomingMessage)
