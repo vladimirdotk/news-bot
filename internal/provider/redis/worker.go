@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/go-redis/redis/v7"
+	"github.com/redis/go-redis/v9"
 
 	"github.com/vladimirdotk/news-bot/internal/domain"
 )
@@ -48,7 +48,8 @@ loop:
 }
 
 func (w *Worker) execute() error {
-	response, err := w.redisClient.BLPop(time.Second*2, domain.QueueTopicIncomingCommand.String()).Result()
+	ctx := context.TODO()
+	response, err := w.redisClient.BLPop(ctx, time.Second*2, domain.QueueTopicIncomingCommand.String()).Result()
 	if err == redis.Nil {
 		return nil
 	}

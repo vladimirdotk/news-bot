@@ -1,8 +1,7 @@
 .PHONY: deps
 deps:
-	@go mod download
-	@go mod vendor
 	@go mod tidy
+	@go mod vendor
 
 .PHONY: build
 build:
