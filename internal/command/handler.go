@@ -4,17 +4,20 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 
 	"github.com/vladimirdotk/news-bot/internal/domain"
 )
 
 type Handler struct {
 	queueService QueueService
+	log          *slog.Logger
 }
 
-func NewHandler(queueService QueueService) *Handler {
+func NewHandler(queueService QueueService, log *slog.Logger) *Handler {
 	return &Handler{
 		queueService: queueService,
+		log:          log,
 	}
 }
 

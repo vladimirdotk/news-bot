@@ -3,6 +3,7 @@ package command
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"strings"
 
 	"github.com/redis/go-redis/v9"
@@ -14,13 +15,20 @@ type Executor struct {
 	redisClient    redis.Cmdable
 	responseSender ResponseSender
 	sourceDetector SourceDetector
+	log            *slog.Logger
 }
 
-func NewExecutor(redisClient redis.Cmdable, responseSender ResponseSender, sourceDetector SourceDetector) *Executor {
+func NewExecutor(
+	redisClient redis.Cmdable,
+	responseSender ResponseSender,
+	sourceDetector SourceDetector,
+	log *slog.Logger,
+) *Executor {
 	return &Executor{
 		redisClient:    redisClient,
 		responseSender: responseSender,
 		sourceDetector: sourceDetector,
+		log:            log,
 	}
 }
 

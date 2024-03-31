@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"strconv"
 
@@ -19,12 +20,14 @@ const (
 type Sender struct {
 	httpClient *http.Client
 	sendURL    string
+	log        *slog.Logger
 }
 
-func NewSender(httpClient *http.Client, token string) *Sender {
+func NewSender(httpClient *http.Client, token string, log *slog.Logger) *Sender {
 	return &Sender{
 		httpClient: httpClient,
 		sendURL:    fmt.Sprintf(sendURLPattern, telegramURL, token),
+		log:        log,
 	}
 }
 

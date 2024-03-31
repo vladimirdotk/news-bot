@@ -6,4 +6,5 @@ import "github.com/vladimirdotk/news-bot/config"
 type Config struct {
 	Telegram config.Telegram
 	Redis    config.Redis
+	Log      config.Log
 }
