@@ -32,7 +32,7 @@ func main() {
 	queueService := redisprovider.NewQueueService(redisClient, log)
 	commandHandler := command.NewHandler(queueService, log)
 
-	bot, err := telegram.NewBot(config.Telegram.BotToken, commandHandler, true)
+	bot, err := telegram.NewBot(config.Telegram.BotToken, commandHandler, true, log)
 	if err != nil {
 		log.Error(
 			"create bot",

@@ -28,7 +28,9 @@ func NewExecutor(
 		redisClient:    redisClient,
 		responseSender: responseSender,
 		sourceDetector: sourceDetector,
-		log:            log,
+		log: slog.With(
+			slog.Group("command executor"),
+		),
 	}
 }
 
