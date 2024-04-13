@@ -20,7 +20,9 @@ type Collector struct {
 func NewCollector(redisClient redis.Cmdable, log *slog.Logger) *Collector {
 	return &Collector{
 		redisClient: redisClient,
-		log:         log,
+		log: slog.With(
+			slog.Group("news collector"),
+		),
 	}
 }
 

@@ -23,7 +23,9 @@ func NewWorker(redisClient redis.Cmdable, commandExecutor CommandExecutor, log *
 	return &Worker{
 		redisClient:     redisClient,
 		commandExecutor: commandExecutor,
-		log:             log,
+		log: slog.With(
+			slog.Group("redis worker"),
+		),
 	}
 }
 

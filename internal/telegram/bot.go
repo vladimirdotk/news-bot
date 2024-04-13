@@ -3,7 +3,7 @@ package telegram
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"strconv"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -15,29 +15,38 @@ type Bot struct {
 	updatesChan tgbotapi.UpdatesChannel
 
 	messageHandler MessageHandler
+
+	log *slog.Logger
 }
 
-func NewBot(token string, messageHandler MessageHandler, debug bool) (*Bot, error) {
-	bot, err := tgbotapi.NewBotAPI(token)
+func NewBot(token string, messageHandler MessageHandler, debug bool, log *slog.Logger) (*Bot, error) {
+	botAPI, err := tgbotapi.NewBotAPI(token)
 	if err != nil {
 		return nil, fmt.Errorf("create bot: %v", err)
 	}
 
-	bot.Debug = debug
+	botAPI.Debug = debug
 
-	log.Printf("Authorized on account %s", bot.Self.UserName)
-
-	botConfig := tgbotapi.UpdateConfig{
-		Timeout: 60,
+	bot := Bot{
+		bot:            botAPI,
+		messageHandler: messageHandler,
+		log: slog.With(
+			slog.Group("telegram bot"),
+		),
 	}
 
-	updates := bot.GetUpdatesChan(botConfig)
+	bot.log.Debug(
+		"Authorized",
+		slog.String("account", bot.bot.Self.UserName),
+	)
 
-	return &Bot{
-		bot:            bot,
-		updatesChan:    updates,
-		messageHandler: messageHandler,
-	}, nil
+	bot.updatesChan = botAPI.GetUpdatesChan(
+		tgbotapi.UpdateConfig{
+			Timeout: 60,
+		},
+	)
+
+	return &bot, nil
 }
 
 func (b *Bot) Run() {
@@ -49,7 +58,11 @@ func (b *Bot) Run() {
 			continue
 		}
 
-		log.Printf("[%s] %s", update.Message.From.UserName, update.Message.Text)
+		b.log.Debug(
+			"Received message",
+			slog.String("username", update.Message.From.UserName),
+			slog.String("text", update.Message.Text),
+		)
 
 		incomingMessage := incomingMessageToDomain(update.Message)
 		if incomingMessage == nil {
@@ -57,8 +70,11 @@ func (b *Bot) Run() {
 		}
 
 		if err := b.messageHandler.Handle(ctx, incomingMessage); err != nil {
-			log.Printf("handle message: %v", err)
-			b.reply(update.Message.Chat.ID, update.Message.MessageID, "Произошла ошибка")
+			b.log.Error(
+				"Handle message",
+				slog.String("error", err.Error()),
+			)
+			b.reply(update.Message.Chat.ID, update.Message.MessageID, "Error happend")
 			continue
 		}
 	}
@@ -72,7 +88,10 @@ func (b *Bot) reply(chatID int64, replyToMessageID int, text string) {
 
 func (b *Bot) send(message tgbotapi.Chattable) {
 	if _, err := b.bot.Send(message); err != nil {
-		log.Printf("send message: %v", err)
+		b.log.Error(
+			"Send message",
+			slog.String("error", err.Error()),
+		)
 	}
 }
 

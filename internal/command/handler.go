@@ -17,7 +17,9 @@ type Handler struct {
 func NewHandler(queueService QueueService, log *slog.Logger) *Handler {
 	return &Handler{
 		queueService: queueService,
-		log:          log,
+		log: slog.With(
+			slog.Group("command handler"),
+		),
 	}
 }
 
