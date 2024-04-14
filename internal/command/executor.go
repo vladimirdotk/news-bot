@@ -48,7 +48,7 @@ func (e *Executor) Exec(ctx context.Context, message domain.IncomingMessage) err
 
 // addSource validates and adds source to user's list (if valid).
 func (e *Executor) addSource(ctx context.Context, message domain.IncomingMessage) error {
-	commandArgs, err := getCommandArgs(message.Text)
+	commandArgs, err := getCommandArgs(message.Text, 2)
 	if err != nil {
 		return fmt.Errorf("get command args: %v", err)
 	}
@@ -64,9 +64,9 @@ func (e *Executor) addSource(ctx context.Context, message domain.IncomingMessage
 		return e.sendSuccessMessage(ctx, message)
 	}
 
-	sourceType := e.sourceDetector.Detect(ctx, commandArgs[1])
+	sourceType := e.sourceDetector.Detect(ctx, url)
 	if sourceType == domain.SourceTypeUnknown {
-		return fmt.Errorf("unknown source by URL: %v", commandArgs[1])
+		return fmt.Errorf("unknown source by URL: %v", url)
 	}
 
 	sourceJSON, err := domain.SourceToJSON(&domain.Source{
@@ -81,11 +81,7 @@ func (e *Executor) addSource(ctx context.Context, message domain.IncomingMessage
 		return fmt.Errorf("sadd, key: %s, value: %s, err: %v", message.UserID, string(sourceJSON), err)
 	}
 
-	if err := e.sendSuccessMessage(ctx, message); err != nil {
-		return fmt.Errorf("send success message: %v", err)
-	}
-
-	return nil
+	return e.sendSuccessMessage(ctx, message)
 }
 
 // listSources sends user's sources list if any.
@@ -108,22 +104,17 @@ func (e *Executor) listSources(ctx context.Context, message domain.IncomingMessa
 
 	outgoingMessage := toOutgoingMessage(message, strings.Join(sourcesURLs, "\n"))
 	if len(sources) == 0 {
-		outgoingMessage.Text = "Источники не найдены"
+		outgoingMessage.Text = "Sources not found"
 	}
 
-	if err := e.responseSender.Send(ctx, outgoingMessage); err != nil {
-		return fmt.Errorf("send response: %v", err)
-	}
-
-	return nil
+	return e.responseSender.Send(ctx, outgoingMessage)
 }
 
 // getCommandArgs returns slice of command args
-// TODO: make more clear and reusable
-func getCommandArgs(message string) ([]string, error) {
+func getCommandArgs(message string, argsCount int) ([]string, error) {
 	messageParts := strings.Split(message, " ")
-	if len(messageParts) < 2 {
-		return nil, fmt.Errorf("wrong command, expected 2 arguments, found: %v", messageParts)
+	if len(messageParts) != argsCount {
+		return nil, fmt.Errorf("wrong command, expected %d arguments, found: %v", argsCount, messageParts)
 	}
 
 	return messageParts, nil
@@ -138,7 +129,7 @@ func toOutgoingMessage(src domain.IncomingMessage, text string) domain.OutgoingM
 }
 
 func (e *Executor) sendSuccessMessage(ctx context.Context, message domain.IncomingMessage) error {
-	outgoingMessage := toOutgoingMessage(message, "Источник добавлен")
+	outgoingMessage := toOutgoingMessage(message, "Source added successfully")
 
 	if err := e.responseSender.Send(ctx, outgoingMessage); err != nil {
 		return fmt.Errorf("send response: %v", err)
