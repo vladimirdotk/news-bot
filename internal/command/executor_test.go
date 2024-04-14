@@ -46,7 +46,7 @@ func TestExecutor_Exec(t *testing.T) {
 					context.TODO(),
 					domain.OutgoingMessage{
 						UserID:      "u1",
-						Text:        "Источник добавлен",
+						Text:        "Source added successfully",
 						Destination: domain.MessageSystemTelegram,
 					},
 				).
@@ -86,7 +86,7 @@ func TestExecutor_Exec(t *testing.T) {
 					context.TODO(),
 					domain.OutgoingMessage{
 						UserID:      "u1",
-						Text:        "Источник добавлен",
+						Text:        "Source added successfully",
 						Destination: domain.MessageSystemTelegram,
 					},
 				).

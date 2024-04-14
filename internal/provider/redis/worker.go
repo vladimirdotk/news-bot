@@ -75,16 +75,16 @@ func (w *Worker) execute(ctx context.Context) error {
 		return fmt.Errorf("to incoming message: %v", err)
 	}
 
-	return w.commandExecutor.Exec(ctx, *incomingMessage)
+	return w.commandExecutor.Exec(ctx, incomingMessage)
 }
 
-func toIncomingMessage(src string) (*domain.IncomingMessage, error) {
+func toIncomingMessage(src string) (domain.IncomingMessage, error) {
 	var incomingMessage domain.IncomingMessage
 	if err := json.Unmarshal([]byte(src), &incomingMessage); err != nil {
-		return nil, fmt.Errorf("convert from json to incmming message: %v", err)
+		return domain.IncomingMessage{}, fmt.Errorf("convert from json to incoming message: %v", err)
 	}
 
-	return &incomingMessage, nil
+	return incomingMessage, nil
 }
 
 func getMessage(response []string) (string, error) {
