@@ -5,21 +5,29 @@ import (
 	"fmt"
 	"log/slog"
 	"strconv"
+	"sync"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/vladimirdotk/news-bot/internal/domain"
 )
 
 type Bot struct {
-	bot         *tgbotapi.BotAPI
-	updatesChan tgbotapi.UpdatesChannel
+	bot          *tgbotapi.BotAPI
+	incomingChan tgbotapi.UpdatesChannel
+	outgoingChan <-chan domain.OutgoingMessage
 
 	messageHandler MessageHandler
 
 	log *slog.Logger
 }
 
-func NewBot(token string, messageHandler MessageHandler, debug bool, log *slog.Logger) (*Bot, error) {
+func NewBot(
+	token string,
+	messageHandler MessageHandler,
+	outgoingChan <-chan domain.OutgoingMessage,
+	debug bool,
+	log *slog.Logger,
+) (*Bot, error) {
 	botAPI, err := tgbotapi.NewBotAPI(token)
 	if err != nil {
 		return nil, fmt.Errorf("create bot: %v", err)
@@ -30,6 +38,7 @@ func NewBot(token string, messageHandler MessageHandler, debug bool, log *slog.L
 	bot := Bot{
 		bot:            botAPI,
 		messageHandler: messageHandler,
+		outgoingChan:   outgoingChan,
 		log: slog.With(
 			slog.Group("telegram bot"),
 		),
@@ -40,7 +49,7 @@ func NewBot(token string, messageHandler MessageHandler, debug bool, log *slog.L
 		slog.String("account", bot.bot.Self.UserName),
 	)
 
-	bot.updatesChan = botAPI.GetUpdatesChan(
+	bot.incomingChan = botAPI.GetUpdatesChan(
 		tgbotapi.UpdateConfig{
 			Timeout: 60,
 		},
@@ -49,33 +58,70 @@ func NewBot(token string, messageHandler MessageHandler, debug bool, log *slog.L
 	return &bot, nil
 }
 
-func (b *Bot) Run() {
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
+func (b *Bot) Run(ctx context.Context) {
+	wg := sync.WaitGroup{}
+	wg.Add(2)
 
-	for update := range b.updatesChan {
-		if update.Message == nil { // ignore any non-Message Updates
-			continue
-		}
+	go b.handleIncoming(ctx, &wg)
+	go b.handleOutgoing(ctx, &wg)
 
-		b.log.Debug(
-			"Received message",
-			slog.String("username", update.Message.From.UserName),
-			slog.String("text", update.Message.Text),
-		)
+	wg.Wait()
+}
 
-		incomingMessage := incomingMessageToDomain(update.Message)
-		if incomingMessage == nil {
-			continue
-		}
+func (b *Bot) handleIncoming(ctx context.Context, wg *sync.WaitGroup) {
+	defer wg.Done()
 
-		if err := b.messageHandler.Handle(ctx, incomingMessage); err != nil {
-			b.log.Error(
-				"Handle message",
-				slog.String("error", err.Error()),
+	for {
+		select {
+		case <-ctx.Done():
+			break
+		case update := <-b.incomingChan:
+			if update.Message == nil { // ignore any non-Message Updates
+				continue
+			}
+
+			b.log.Debug(
+				"Received message",
+				slog.String("username", update.Message.From.UserName),
+				slog.String("text", update.Message.Text),
 			)
-			b.reply(update.Message.Chat.ID, update.Message.MessageID, "Error happend")
-			continue
+
+			incomingMessage := incomingMessageToDomain(update.Message)
+			if incomingMessage == nil {
+				continue
+			}
+
+			if err := b.messageHandler.Handle(ctx, incomingMessage); err != nil {
+				b.log.Error(
+					"Handle message",
+					slog.String("error", err.Error()),
+				)
+				b.reply(update.Message.Chat.ID, update.Message.MessageID, "Error happend")
+				continue
+			}
+		}
+	}
+}
+
+func (b *Bot) handleOutgoing(ctx context.Context, wg *sync.WaitGroup) {
+	defer wg.Done()
+
+	for {
+		select {
+		case <-ctx.Done():
+			break
+		case messsage := <-b.outgoingChan:
+			userID, err := strconv.ParseInt(messsage.UserID, 10, 64)
+			if err != nil {
+				b.log.Error(
+					"Converting userID to int",
+					slog.String("error", err.Error()),
+				)
+			}
+
+			b.send(
+				tgbotapi.NewMessage(userID, messsage.Text),
+			)
 		}
 	}
 }
